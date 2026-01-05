@@ -1,0 +1,61 @@
+# --- Secrets / env ---
+.env
+.env.*
+!.env.example
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# --- Virtual environments ---
+.venv/
+venv/
+ENV/
+env/
+
+# --- Flask ---
+instance/
+.webassets-cache/
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Databases / local data ---
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.sql
+*.csv
+
+# --- Test / tooling caches ---
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.pyright/
+.ruff_cache/
+.cache/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+
+# --- Node (if ever used) ---
+node_modules/

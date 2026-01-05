@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>로또 6/45 번호 뽑기</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Cdefs%3E%3CradialGradient%20id='g'%20cx='35%25'%20cy='30%25'%20r='80%25'%3E%3Cstop%20offset='0%25'%20stop-color='%232dd4bf'/%3E%3Cstop%20offset='55%25'%20stop-color='%237c5cff'/%3E%3Cstop%20offset='100%25'%20stop-color='%230b1220'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle%20cx='32'%20cy='32'%20r='28'%20fill='url(%23g)'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='28'%20fill='none'%20stroke='rgba(234,240,255,0.25)'%20stroke-width='2'/%3E%3Ctext%20x='32'%20y='38'%20text-anchor='middle'%20font-family='system-ui,Segoe%20UI,Arial'%20font-size='18'%20font-weight='800'%20fill='%23eaf0ff'%3E6%2F45%3C/text%3E%3C/svg%3E"
+    />
+    <style>
+      :root {
+        --bg: #0b1220;
+        --card: #0f1a2e;
+        --text: #eaf0ff;
+        --muted: #b8c3e6;
+        --border: rgba(234, 240, 255, 0.16);
+        --accent: #7c5cff;
+        --accent-2: #2dd4bf;
+        --danger: #fb7185;
+      }
+
+      :root { color-scheme: dark; }
+      body { margin: 0; padding: 24px; line-height: 1.6; background: var(--bg); color: var(--text); }
+      main { max-width: 860px; margin: 0 auto; }
+      h1 { margin: 0 0 8px 0; letter-spacing: -0.02em; }
+      h2 { letter-spacing: -0.01em; }
+      .muted { color: var(--muted); }
+      .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin: 16px 0; }
+      .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+      label { font-weight: 600; }
+      select, button { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,0.03); color: var(--text); }
+      select { background: var(--card); }
+      option { background: var(--card); color: var(--text); }
+      select:focus, button:focus { outline: 2px solid rgba(124, 92, 255, 0.45); outline-offset: 2px; }
+      button { cursor: pointer; background: linear-gradient(135deg, rgba(124, 92, 255, 0.95), rgba(45, 212, 191, 0.9)); border: 0; font-weight: 700; }
+      button:active { transform: translateY(1px); }
+      .numbers { font-size: 22px; font-weight: 800; letter-spacing: 0.02em; }
+      .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+      .stat { border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: rgba(255,255,255,0.02); }
+      .stat .label { display: block; font-weight: 600; margin-bottom: 6px; }
+      .stat .value { font-size: 18px; font-weight: 700; }
+      .divider { height: 1px; background: var(--border); margin: 14px 0; }
+      .list { display: grid; gap: 10px; }
+      .list-item { border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: rgba(255,255,255,0.02); }
+      .list-title { font-weight: 800; letter-spacing: 0.01em; }
+      .list-meta { margin-top: 6px; color: var(--muted); font-size: 13px; }
+      .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border); background: rgba(255,255,255,0.03); font-weight: 700; }
+      .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+      details.overlap-details { border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: rgba(255,255,255,0.02); }
+      details.overlap-details > summary { cursor: pointer; font-weight: 800; }
+      details.overlap-details[open] > summary { margin-bottom: 10px; }
+      .history { display: grid; gap: 10px; }
+      .history-item { display: flex; gap: 12px; align-items: center; justify-content: space-between; border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: rgba(255,255,255,0.02); }
+      .history-left { display: flex; flex-direction: column; gap: 6px; min-width: 220px; }
+      .history-title { font-weight: 700; }
+      .history-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-end; }
+      .btn-secondary { background: rgba(255,255,255,0.06); border: 1px solid var(--border); font-weight: 700; }
+      .modal-backdrop { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(11,18,32,0.6); z-index: 50; }
+      .modal-backdrop[hidden] { display: none !important; }
+      .modal { width: min(520px, 100%); background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: 0 0 0 1px rgba(234,240,255,0.04) inset; }
+      .modal-title { margin: 0 0 8px 0; font-weight: 900; letter-spacing: -0.01em; }
+      .modal-message { margin: 0; color: var(--muted); }
+      .modal-actions { margin-top: 14px; display: flex; justify-content: flex-end; gap: 10px; }
+      .toast { position: fixed; right: 18px; bottom: 18px; z-index: 60; width: min(420px, calc(100% - 36px)); background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; box-shadow: 0 0 0 1px rgba(234,240,255,0.04) inset; }
+      .toast[hidden] { display: none !important; }
+      .toast-title { font-weight: 900; margin: 0 0 4px 0; }
+      .toast-message { margin: 0; color: var(--muted); }
+      pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+      @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+      @media (max-width: 720px) { .history-item { flex-direction: column; align-items: stretch; } .history-actions { justify-content: stretch; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="row" style="justify-content: space-between; align-items: flex-start;">
+          <div>
+            <h1>로또 6/45 번호 뽑기</h1>
+            <div class="muted">1~45에서 6개 번호를 뽑고, 과거 당첨 조합을 제외할 수 있어요.</div>
+          </div>
+          <div class="row" style="justify-content: flex-end;">
+            <button id="goOverlaps" type="button" class="btn-secondary">겹치는 조합 보기</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="card" aria-label="Overlap overview">
+        <h2 style="margin: 0 0 8px 0;">겹침 통계 (히스토리 기준)</h2>
+        <div class="muted" style="margin-bottom: 12px;">
+          과거 회차 데이터로 계산한 “겹침(count)”과 “비율(%)”입니다.
+        </div>
+        <div id="overlapGrid" class="grid" aria-live="polite">
+          <div class="stat">
+            <span class="label">1등 ↔ 다른 회차 1등</span>
+            <div class="value" id="statFirstVsFirst">Loading…</div>
+          </div>
+          <div class="stat">
+            <span class="label">2등 ↔ 다른 회차 1등</span>
+            <div class="value" id="statSecondVsFirst">Loading…</div>
+          </div>
+          <div class="stat">
+            <span class="label">2등 ↔ 다른 회차 2등</span>
+            <div class="value" id="statSecondVsSecond">Loading…</div>
+          </div>
+          <div class="stat">
+            <span class="label">3등 ↔ 다른 회차 1등</span>
+            <div class="value" id="statThirdVsFirst">Loading…</div>
+          </div>
+          <div class="stat">
+            <span class="label">3등 ↔ 다른 회차 2등</span>
+            <div class="value" id="statThirdVsSecond">Loading…</div>
+          </div>
+        </div>
+        <div class="muted" id="overlapMeta" style="margin-top: 12px;"></div>
+      </section>
+
+      <section class="card" aria-label="Draw controls">
+        <div class="row" style="justify-content: space-between;">
+          <div>
+            <label for="mode">제외 옵션</label>
+            <div class="muted">어떤 과거 조합을 피할지 선택하세요.</div>
+          </div>
+          <div class="row">
+            <select id="mode" aria-label="제외 옵션">
+              <option value="NONE">랜덤 뽑기 (제외 없음)</option>
+              <option value="FIRST">과거 1등 조합 제외</option>
+              <option value="SECOND">과거 2등 조합 제외</option>
+              <option value="THIRD">과거 3등 조합 제외</option>
+              <option value="ALL">과거 1·2·3등 조합 모두 제외</option>
+            </select>
+            <button id="drawBtn" type="button">뽑기</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Draw result">
+        <h2 style="margin: 0 0 8px 0;">결과</h2>
+        <div class="numbers" id="numbers">(“번호 뽑기”를 눌러주세요)</div>
+        <details style="margin-top: 10px;">
+          <summary class="muted">원본 응답(JSON)</summary>
+          <pre id="result"></pre>
+        </details>
+      </section>
+
+      <section class="card" aria-label="Draw history">
+        <div class="row" style="justify-content: space-between; align-items: center;">
+          <h2 style="margin: 0;">히스토리</h2>
+          <div class="row" style="justify-content: flex-end;">
+            <button id="copyHistoryBtn" type="button" class="btn-secondary">Copy</button>
+            <button id="downloadHistoryBtn" type="button" class="btn-secondary">Excel 다운로드</button>
+          </div>
+        </div>
+        <div class="muted" style="margin-bottom: 12px;">결과가 누적됩니다. 각 줄에서 “결과 번호 제외”를 누르면 현재 “결과”의 6개 번호를 제외해서 뽑고, “재뽑기”는 왼쪽 번호를 제외해서 다시 뽑아요.</div>
+        <div id="history" class="history" aria-live="polite"></div>
+        <div id="historyEmpty" class="muted">아직 기록이 없어요.</div>
+      </section>
+    </main>
+
+    <div id="appAlert" class="modal-backdrop" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="appAlertTitle" aria-describedby="appAlertMessage">
+        <h3 id="appAlertTitle" class="modal-title">알림</h3>
+        <p id="appAlertMessage" class="modal-message"></p>
+        <div class="modal-actions">
+          <button id="appAlertOk" type="button">확인</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="appToast" class="toast" hidden>
+      <div id="appToastTitle" class="toast-title">완료</div>
+      <p id="appToastMessage" class="toast-message"></p>
+    </div>
+
+    <script>
+      const resultEl = document.getElementById('result');
+      const numbersEl = document.getElementById('numbers');
+      const modeEl = document.getElementById('mode');
+      const redrawBtn = document.getElementById('drawBtn');
+      const randomBtn = document.getElementById('randomBtn');
+      const historyEl = document.getElementById('history');
+      const historyEmptyEl = document.getElementById('historyEmpty');
+      const copyHistoryBtn = document.getElementById('copyHistoryBtn');
+      const downloadHistoryBtn = document.getElementById('downloadHistoryBtn');
+      const appAlertEl = document.getElementById('appAlert');
+      const appAlertTitleEl = document.getElementById('appAlertTitle');
+      const appAlertMessageEl = document.getElementById('appAlertMessage');
+      const appAlertOkEl = document.getElementById('appAlertOk');
+      const appToastEl = document.getElementById('appToast');
+      const appToastTitleEl = document.getElementById('appToastTitle');
+      const appToastMessageEl = document.getElementById('appToastMessage');
+
+      let toastTimer = null;
+
+      let cachedOverlapData = null;
+
+      document.getElementById('goOverlaps')?.addEventListener('click', () => {
+        window.location.href = '/overlaps';
+      });
+
+      const history = [];
+
+      const MODE_OPTIONS = [
+        { value: 'NONE', label: '랜덤 뽑기 (제외 없음)' },
+        { value: 'FIRST', label: '과거 1등 조합 제외' },
+        { value: 'SECOND', label: '과거 2등 조합 제외' },
+        { value: 'THIRD', label: '과거 3등 조합 제외' },
+        { value: 'ALL', label: '과거 1·2·3등 조합 모두 제외' },
+      ];
+
+      function showAlert(message, title = '알림') {
+        if (!appAlertEl || !appAlertTitleEl || !appAlertMessageEl) {
+          // Fallback
+          alert(String(message));
+          return;
+        }
+        appAlertTitleEl.textContent = String(title);
+        appAlertMessageEl.textContent = String(message);
+        appAlertEl.hidden = false;
+        appAlertOkEl?.focus();
+      }
+
+      function hideAlert() {
+        if (!appAlertEl) return;
+        appAlertEl.hidden = true;
+      }
+
+      // Defensive: ensure modal is not visible on initial load.
+      hideAlert();
+
+      function showToast(message, title = '완료', ms = 1400) {
+        if (!appToastEl || !appToastTitleEl || !appToastMessageEl) return;
+        if (toastTimer) {
+          clearTimeout(toastTimer);
+          toastTimer = null;
+        }
+        appToastTitleEl.textContent = String(title);
+        appToastMessageEl.textContent = String(message);
+        appToastEl.hidden = false;
+        toastTimer = setTimeout(() => {
+          appToastEl.hidden = true;
+          toastTimer = null;
+        }, ms);
+      }
+
+      appAlertOkEl?.addEventListener('click', hideAlert);
+      appAlertEl?.addEventListener('click', (e) => {
+        if (e.target === appAlertEl) hideAlert();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && appAlertEl && !appAlertEl.hidden) hideAlert();
+      });
+
+      function modeLabel(value) {
+        const opt = MODE_OPTIONS.find((o) => o.value === value);
+        return opt?.label ?? String(value ?? '');
+      }
+
+      function escapeHtml(text) {
+        return String(text)
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#39;');
+      }
+
+      function historyRows() {
+        return history.map((h, idx) => ({
+          no: idx + 1,
+          numbers: Array.isArray(h?.numbers) ? h.numbers.join(', ') : '',
+          mode: modeLabel(h?.mode),
+        }));
+      }
+
+      async function copyHistoryToClipboard() {
+        const rows = historyRows();
+        const header = ['No', 'Numbers', 'Mode'].join('\t');
+        const body = rows.map((r) => [r.no, r.numbers, r.mode].join('\t')).join('\n');
+        const text = rows.length ? `${header}\n${body}` : header;
+
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.left = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          const ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+          return ok;
+        }
+      }
+
+      function downloadHistoryAsExcel() {
+        const rows = historyRows();
+        const tableRows = rows
+          .map((r) => `<tr><td>${escapeHtml(r.no)}</td><td>${escapeHtml(r.numbers)}</td><td>${escapeHtml(r.mode)}</td></tr>`)
+          .join('');
+
+        const html = `<!doctype html><html><head><meta charset="utf-8"></head><body><table border="1"><thead><tr><th>No</th><th>Numbers</th><th>Mode</th></tr></thead><tbody>${tableRows}</tbody></table></body></html>`;
+        const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+        a.download = `lotto_history_${stamp}.xls`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      copyHistoryBtn?.addEventListener('click', async () => {
+        if (history.length === 0) {
+          showAlert('기록이 없습니다');
+          return;
+        }
+        copyHistoryBtn.disabled = true;
+        copyHistoryBtn.style.opacity = '0.7';
+        try {
+          const ok = await copyHistoryToClipboard();
+          if (!ok) {
+            showAlert('복사에 실패했어요.');
+            return;
+          }
+          showToast('히스토리를 클립보드에 복사했어요.');
+        } finally {
+          copyHistoryBtn.disabled = false;
+          copyHistoryBtn.style.opacity = '1';
+        }
+      });
+
+      downloadHistoryBtn?.addEventListener('click', () => {
+        if (history.length === 0) {
+          showAlert('기록이 없습니다');
+          return;
+        }
+        downloadHistoryBtn.disabled = true;
+        downloadHistoryBtn.style.opacity = '0.7';
+        try {
+          downloadHistoryAsExcel();
+          showToast('엑셀 다운로드를 시작했어요.');
+        } finally {
+          downloadHistoryBtn.disabled = false;
+          downloadHistoryBtn.style.opacity = '1';
+        }
+      });
+
+      function fmtPct(p) {
+        if (typeof p !== 'number' || Number.isNaN(p)) return '—';
+        if (p === 0) return '0%';
+        return `${p.toFixed(4)}%`;
+      }
+
+      function setStat(id, count, denom, pct) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = `${count} (${fmtPct(pct)})`;
+        el.title = `count=${count}, denominator=${denom}`;
+      }
+
+      async function ensureOverlapData() {
+        if (cachedOverlapData) return cachedOverlapData;
+        const res = await fetch('/analysis/overlap');
+        const payload = await res.json();
+        if (!res.ok || !payload.success) throw new Error('Failed to load overlap stats');
+        cachedOverlapData = payload.data;
+        return cachedOverlapData;
+      }
+
+      async function loadOverlapOverview() {
+        try {
+          const data = await ensureOverlapData();
+          const stats = data.overlap_percentages;
+          const denom1 = stats?.denominators?.unique_1st_place_combinations ?? 0;
+          const denom2 = stats?.denominators?.unique_2nd_place_combinations ?? 0;
+          const denom3 = stats?.denominators?.unique_3rd_place_combinations ?? 0;
+          const counts = stats?.counts ?? {};
+          const pct = stats?.percent ?? {};
+
+          setStat('statFirstVsFirst', counts['1st_overlapping_other_1st'] ?? 0, denom1, pct['1st_overlapping_other_1st']);
+          setStat('statSecondVsFirst', counts['2nd_overlapping_other_1st'] ?? 0, denom2, pct['2nd_overlapping_other_1st']);
+          setStat('statSecondVsSecond', counts['2nd_overlapping_other_2nd'] ?? 0, denom2, pct['2nd_overlapping_other_2nd']);
+          setStat('statThirdVsFirst', counts['3rd_overlapping_other_1st'] ?? 0, denom3, pct['3rd_overlapping_other_1st']);
+          setStat('statThirdVsSecond', counts['3rd_overlapping_other_2nd'] ?? 0, denom3, pct['3rd_overlapping_other_2nd']);
+
+          const metaEl = document.getElementById('overlapMeta');
+          if (metaEl) {
+            metaEl.textContent = `분모(유니크 조합 수): 1등=${denom1}, 2등=${denom2}, 3등=${denom3}`;
+          }
+        } catch (e) {
+          const ids = ['statFirstVsFirst', 'statSecondVsFirst', 'statSecondVsSecond', 'statThirdVsFirst', 'statThirdVsSecond'];
+          ids.forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = 'Unavailable';
+          });
+          const metaEl = document.getElementById('overlapMeta');
+          if (metaEl) metaEl.textContent = String(e);
+        }
+      }
+
+      loadOverlapOverview();
+
+      function setDrawingState(isDrawing) {
+        if (redrawBtn) {
+          redrawBtn.disabled = isDrawing;
+          redrawBtn.style.opacity = isDrawing ? '0.7' : '1';
+        }
+        if (randomBtn) {
+          randomBtn.disabled = isDrawing;
+          randomBtn.style.opacity = isDrawing ? '0.7' : '1';
+        }
+      }
+
+      async function postDraw(payload) {
+        const res = await fetch('/draw', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        return { res, json };
+      }
+
+      function showDrawResult(payload) {
+        const newNumbers = payload?.data?.numbers;
+        if (!Array.isArray(newNumbers)) {
+          numbersEl.textContent = 'Error';
+          resultEl.textContent = JSON.stringify(payload, null, 2);
+          return null;
+        }
+        numbersEl.textContent = newNumbers.join(', ');
+        resultEl.textContent = JSON.stringify(payload, null, 2);
+        return newNumbers;
+      }
+
+      function getCurrentResultNumbers() {
+        const text = String(numbersEl?.textContent ?? '');
+        const nums = (text.match(/\d+/g) ?? []).map((n) => Number.parseInt(n, 10));
+        const unique = Array.from(new Set(nums)).filter((n) => Number.isInteger(n) && n >= 1 && n <= 45);
+        if (unique.length !== 6) return null;
+        unique.sort((a, b) => a - b);
+        return unique;
+      }
+
+      function renderHistory() {
+        if (!historyEl) return;
+        historyEl.innerHTML = '';
+        if (historyEmptyEl) historyEmptyEl.style.display = history.length ? 'none' : 'block';
+
+        history.forEach((item, idx) => {
+          const row = document.createElement('div');
+          row.className = 'history-item';
+
+          const left = document.createElement('div');
+          left.className = 'history-left';
+
+          const title = document.createElement('div');
+          title.className = 'history-title';
+          title.textContent = `#${idx + 1} 결과`;
+
+          const nums = document.createElement('div');
+          nums.className = 'numbers';
+          nums.textContent = item.numbers.join(', ');
+
+          left.appendChild(title);
+          left.appendChild(nums);
+
+          const actions = document.createElement('div');
+          actions.className = 'history-actions';
+
+          const select = document.createElement('select');
+          select.setAttribute('aria-label', '재뽑기 제외 옵션');
+          MODE_OPTIONS.forEach((opt) => {
+            const o = document.createElement('option');
+            o.value = opt.value;
+            o.textContent = opt.label;
+            select.appendChild(o);
+          });
+          select.value = item.mode;
+          select.addEventListener('change', () => {
+            item.mode = select.value;
+          });
+
+          const btnRandom = document.createElement('button');
+          btnRandom.type = 'button';
+          btnRandom.className = 'btn-secondary';
+          btnRandom.textContent = '결과 번호 제외';
+
+          const btnRedraw = document.createElement('button');
+          btnRedraw.type = 'button';
+          btnRedraw.className = 'btn-secondary';
+          btnRedraw.textContent = '재뽑기';
+
+          btnRandom.addEventListener('click', async () => {
+            btnRandom.disabled = true;
+            btnRandom.style.opacity = '0.7';
+            try {
+              const excludeNums = getCurrentResultNumbers();
+              if (!excludeNums) {
+                numbersEl.textContent = 'Error';
+                resultEl.textContent = '현재 “결과”에 6개 번호가 없어서 제외할 수 없어요.';
+                return;
+              }
+
+              const { res, json } = await postDraw({ exclude_mode: select.value, exclude_numbers: excludeNums });
+              if (!res.ok || !json.success) {
+                numbersEl.textContent = 'Error';
+                resultEl.textContent = JSON.stringify(json, null, 2);
+                return;
+              }
+
+              const newNumbers = showDrawResult(json);
+              if (!newNumbers) return;
+              history.push({ numbers: newNumbers, mode: select.value, note: `exclude_current_result=${excludeNums.join(',')}` });
+              renderHistory();
+            } catch (e) {
+              numbersEl.textContent = 'Error';
+              resultEl.textContent = String(e);
+            } finally {
+              btnRandom.disabled = false;
+              btnRandom.style.opacity = '1';
+            }
+          });
+
+          btnRedraw.addEventListener('click', async () => {
+            btnRedraw.disabled = true;
+            btnRedraw.style.opacity = '0.7';
+            try {
+              const { res, json } = await postDraw({ exclude_mode: select.value, exclude_numbers: item.numbers });
+              if (!res.ok || !json.success) {
+                numbersEl.textContent = 'Error';
+                resultEl.textContent = JSON.stringify(json, null, 2);
+                return;
+              }
+
+              const newNumbers = showDrawResult(json);
+              if (!newNumbers) return;
+
+              history.push({ numbers: newNumbers, mode: select.value, note: `exclude=${item.numbers.join(',')}` });
+              renderHistory();
+            } catch (e) {
+              numbersEl.textContent = 'Error';
+              resultEl.textContent = String(e);
+            } finally {
+              btnRedraw.disabled = false;
+              btnRedraw.style.opacity = '1';
+            }
+          });
+
+          actions.appendChild(select);
+          actions.appendChild(btnRandom);
+          actions.appendChild(btnRedraw);
+
+          row.appendChild(left);
+          row.appendChild(actions);
+          historyEl.appendChild(row);
+        });
+      }
+
+      redrawBtn?.addEventListener('click', async () => {
+        setDrawingState(true);
+        numbersEl.textContent = '뽑는 중...';
+        resultEl.textContent = '';
+        try {
+          const { res, json } = await postDraw({ exclude_mode: modeEl.value });
+          if (!res.ok || !json.success) {
+            numbersEl.textContent = 'Error';
+            resultEl.textContent = JSON.stringify(json, null, 2);
+            return;
+          }
+
+          const drawn = showDrawResult(json);
+          if (!drawn) return;
+
+          history.push({ numbers: drawn, mode: modeEl.value });
+          renderHistory();
+        } catch (e) {
+          numbersEl.textContent = 'Error';
+          resultEl.textContent = String(e);
+        } finally {
+          setDrawingState(false);
+        }
+      });
+
+      randomBtn?.addEventListener('click', async () => {
+        setDrawingState(true);
+        numbersEl.textContent = '뽑는 중...';
+        resultEl.textContent = '';
+        try {
+          const { res, json } = await postDraw({ exclude_mode: 'NONE' });
+          if (!res.ok || !json.success) {
+            numbersEl.textContent = 'Error';
+            resultEl.textContent = JSON.stringify(json, null, 2);
+            return;
+          }
+
+          const drawn = showDrawResult(json);
+          if (!drawn) return;
+
+          history.push({ numbers: drawn, mode: 'NONE' });
+          renderHistory();
+        } catch (e) {
+          numbersEl.textContent = 'Error';
+          resultEl.textContent = String(e);
+        } finally {
+          setDrawingState(false);
+        }
+      });
+    </script>
+  </body>
+</html>

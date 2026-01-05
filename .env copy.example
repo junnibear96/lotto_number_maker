@@ -1,0 +1,14 @@
+# App environment: development | production
+APP_ENV=development
+
+# Flask secret key (required in production)
+SECRET_KEY=change-me
+
+# Database URL
+# Examples:
+# sqlite:///./app.db
+# postgresql+psycopg2://user:pass@host:5432/dbname
+DATABASE_URL=sqlite:///./app.db
+
+# Logging
+LOG_LEVEL=INFO

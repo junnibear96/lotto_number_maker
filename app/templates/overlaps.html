@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>겹치는 조합 목록</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Cdefs%3E%3CradialGradient%20id='g'%20cx='35%25'%20cy='30%25'%20r='80%25'%3E%3Cstop%20offset='0%25'%20stop-color='%232dd4bf'/%3E%3Cstop%20offset='55%25'%20stop-color='%237c5cff'/%3E%3Cstop%20offset='100%25'%20stop-color='%230b1220'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle%20cx='32'%20cy='32'%20r='28'%20fill='url(%23g)'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='28'%20fill='none'%20stroke='rgba(234,240,255,0.25)'%20stroke-width='2'/%3E%3Ctext%20x='32'%20y='38'%20text-anchor='middle'%20font-family='system-ui,Segoe%20UI,Arial'%20font-size='18'%20font-weight='800'%20fill='%23eaf0ff'%3E6%2F45%3C/text%3E%3C/svg%3E"
+    />
+    <style>
+      :root {
+        --bg: #0b1220;
+        --card: #0f1a2e;
+        --text: #eaf0ff;
+        --muted: #b8c3e6;
+        --border: rgba(234, 240, 255, 0.16);
+        --accent: #7c5cff;
+        --accent-2: #2dd4bf;
+      }
+
+      :root { color-scheme: dark; }
+      body { margin: 0; padding: 24px; line-height: 1.6; background: var(--bg); color: var(--text); }
+      main { max-width: 860px; margin: 0 auto; }
+      h1 { margin: 0 0 8px 0; letter-spacing: -0.02em; }
+      .muted { color: var(--muted); }
+      .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin: 16px 0; }
+      .divider { height: 1px; background: var(--border); margin: 14px 0; }
+      .list { display: grid; gap: 10px; }
+      .list-item { border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: rgba(255,255,255,0.02); }
+      .list-title { font-weight: 800; letter-spacing: 0.01em; }
+      .list-meta { margin-top: 6px; color: var(--muted); font-size: 13px; }
+      .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border); background: rgba(255,255,255,0.03); font-weight: 700; }
+      .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+      details.overlap-details { border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: rgba(255,255,255,0.02); }
+      details.overlap-details > summary { cursor: pointer; font-weight: 800; }
+      details.overlap-details[open] > summary { margin-bottom: 10px; }
+      button { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,0.03); color: var(--text); cursor: pointer; }
+      button:focus { outline: 2px solid rgba(124, 92, 255, 0.45); outline-offset: 2px; }
+      button { background: linear-gradient(135deg, rgba(124, 92, 255, 0.95), rgba(45, 212, 191, 0.9)); border: 0; font-weight: 800; }
+      button:active { transform: translateY(1px); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div style="display:flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+          <div>
+            <h1>겹치는 조합 목록</h1>
+            <div class="muted">“열기”를 누르면 실제로 겹친 번호 조합과 해당 회차를 보여줘요.</div>
+          </div>
+          <div>
+            <button id="goHome" type="button">홈으로</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="card" aria-label="Overlap lists">
+        <div class="list" id="overlapLists">
+          <details class="overlap-details" id="detailFirst">
+            <summary>1등 ↔ 1등 (완전 동일 6개)</summary>
+            <div class="muted" id="detailFirstMeta">열면 불러옵니다.</div>
+            <div class="list" id="listFirst"></div>
+          </details>
+          <details class="overlap-details" id="detailSecond">
+            <summary>2등 ↔ 2등 (5개+보너스 6개)</summary>
+            <div class="muted" id="detailSecondMeta">열면 불러옵니다.</div>
+            <div class="list" id="listSecond"></div>
+          </details>
+          <details class="overlap-details" id="detailThird">
+            <summary>3등 ↔ 3등 (동일 5개)</summary>
+            <div class="muted" id="detailThirdMeta">열면 불러옵니다.</div>
+            <div class="list" id="listThird"></div>
+          </details>
+          <details class="overlap-details" id="detailCross">
+            <summary>2등 ↔ 3등 (교차 겹침: 동일 5개)</summary>
+            <div class="muted" id="detailCrossMeta">열면 불러옵니다.</div>
+            <div class="list" id="listCross"></div>
+          </details>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      let cachedOverlapData = null;
+
+      document.getElementById('goHome')?.addEventListener('click', () => {
+        window.location.href = '/';
+      });
+
+      function formatNumbers(nums) {
+        if (!Array.isArray(nums)) return '—';
+        return nums.join(', ');
+      }
+
+      function formatDraws(draws) {
+        if (!Array.isArray(draws)) return '—';
+        return draws.map((d) => `${d}회`).join(', ');
+      }
+
+      function clearEl(el) {
+        if (!el) return;
+        while (el.firstChild) el.removeChild(el.firstChild);
+      }
+
+      function renderOverlapList(containerId, metaId, items, kind) {
+        const container = document.getElementById(containerId);
+        const metaEl = document.getElementById(metaId);
+        if (!container || !metaEl) return;
+
+        clearEl(container);
+
+        if (!Array.isArray(items) || items.length === 0) {
+          metaEl.textContent = '겹치는 조합이 없어요.';
+          return;
+        }
+
+        metaEl.textContent = `총 ${items.length}개 조합이 겹쳐요.`;
+
+        items.forEach((item) => {
+          const card = document.createElement('div');
+          card.className = 'list-item';
+
+          const title = document.createElement('div');
+          title.className = 'list-title';
+          title.textContent = formatNumbers(item.numbers);
+          card.appendChild(title);
+
+          const meta = document.createElement('div');
+          meta.className = 'list-meta';
+
+          if (kind === 'cross') {
+            const chips = document.createElement('div');
+            chips.className = 'chips';
+
+            const c1 = document.createElement('span');
+            c1.className = 'chip';
+            c1.textContent = `2등 회차: ${formatDraws(item.second_draws)}`;
+            chips.appendChild(c1);
+
+            const c2 = document.createElement('span');
+            c2.className = 'chip';
+            c2.textContent = `3등 회차: ${formatDraws(item.third_draws)}`;
+            chips.appendChild(c2);
+
+            meta.appendChild(chips);
+          } else {
+            meta.textContent = `겹친 회차: ${formatDraws(item.draws)}`;
+          }
+
+          card.appendChild(meta);
+          container.appendChild(card);
+        });
+      }
+
+      async function ensureOverlapData() {
+        if (cachedOverlapData) return cachedOverlapData;
+        const res = await fetch('/analysis/overlap');
+        const payload = await res.json();
+        if (!res.ok || !payload.success) throw new Error('Failed to load overlap stats');
+        cachedOverlapData = payload.data;
+        return cachedOverlapData;
+      }
+
+      function attachOverlapDetailsHandlers() {
+        const mappings = [
+          {
+            detailId: 'detailFirst',
+            listId: 'listFirst',
+            metaId: 'detailFirstMeta',
+            key: 'overlapping_1st_prize_combinations',
+            kind: 'simple',
+          },
+          {
+            detailId: 'detailSecond',
+            listId: 'listSecond',
+            metaId: 'detailSecondMeta',
+            key: 'overlapping_2nd_prize_combinations',
+            kind: 'simple',
+          },
+          {
+            detailId: 'detailThird',
+            listId: 'listThird',
+            metaId: 'detailThirdMeta',
+            key: 'overlapping_3rd_prize_combinations',
+            kind: 'simple',
+          },
+          {
+            detailId: 'detailCross',
+            listId: 'listCross',
+            metaId: 'detailCrossMeta',
+            key: 'cross_overlaps_2nd_vs_3rd',
+            kind: 'cross',
+          },
+        ];
+
+        mappings.forEach((m) => {
+          const detail = document.getElementById(m.detailId);
+          if (!detail) return;
+          detail.addEventListener('toggle', async () => {
+            if (!detail.open) return;
+            try {
+              const data = await ensureOverlapData();
+              renderOverlapList(m.listId, m.metaId, data?.[m.key] ?? [], m.kind);
+            } catch (e) {
+              const metaEl = document.getElementById(m.metaId);
+              if (metaEl) metaEl.textContent = String(e);
+            }
+          });
+        });
+      }
+
+      attachOverlapDetailsHandlers();
+    </script>
+  </body>
+</html>

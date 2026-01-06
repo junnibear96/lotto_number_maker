@@ -23,10 +23,21 @@ def draw_numbers():
     data = _request_schema.load(payload)
 
     session = get_session()
-    numbers = _service.draw(
+
+    count = int(data.get("count") or 1)
+    if count <= 1:
+        numbers = _service.draw(
+            session,
+            exclude_mode=str(data["exclude_mode"]),
+            exclude_numbers=data.get("exclude_numbers"),
+        )
+        return ok(_response_schema.dump({"numbers": numbers, "count": 1}))
+
+    draws = _service.draw_many(
         session,
         exclude_mode=str(data["exclude_mode"]),
         exclude_numbers=data.get("exclude_numbers"),
+        count=count,
     )
-
-    return ok(_response_schema.dump({"numbers": numbers}))
+    first = draws[0] if draws else []
+    return ok(_response_schema.dump({"numbers": first, "draws": draws, "count": count}))

@@ -11,6 +11,12 @@ class DrawRequestSchema(Schema):
         validate=validate.OneOf(["NONE", "FIRST", "SECOND", "THIRD", "ALL"]),
     )
 
+    count = fields.Integer(
+        required=False,
+        load_default=1,
+        validate=validate.Range(min=1, max=50),
+    )
+
     exclude_numbers = fields.List(
         fields.Integer(validate=validate.Range(min=1, max=45)),
         required=False,
@@ -33,3 +39,8 @@ class DrawRequestSchema(Schema):
 
 class DrawResponseSchema(Schema):
     numbers = fields.List(fields.Integer(), required=True)
+
+    # When count > 1, the response will also include multiple draws.
+    draws = fields.List(fields.List(fields.Integer()), required=False)
+
+    count = fields.Integer(required=False)

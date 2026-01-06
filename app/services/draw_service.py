@@ -196,3 +196,27 @@ class DrawService:
             message=f"Failed to draw numbers within retry limit ({self._max_retries})",
             status_code=503,
         )
+
+
+    def draw_many(
+        self,
+        session: Session,
+        exclude_mode: str,
+        exclude_numbers: Iterable[int] | None = None,
+        count: int = 1,
+    ) -> list[list[int]]:
+        if count < 1:
+            raise ValidationError(
+                message="Invalid count",
+                details={"count": ["Must be >= 1"]},
+            )
+        if count > 50:
+            raise ValidationError(
+                message="Invalid count",
+                details={"count": ["Must be <= 50"]},
+            )
+
+        return [
+            self.draw(session, exclude_mode=exclude_mode, exclude_numbers=exclude_numbers)
+            for _ in range(int(count))
+        ]

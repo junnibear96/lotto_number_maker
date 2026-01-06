@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from flask import Flask
+import pathlib
 
 try:
     from dotenv import load_dotenv
@@ -16,7 +17,11 @@ def create_app() -> Flask:
         Configured Flask application.
     """
     if load_dotenv is not None:
+        # Load local development env files. Vercel CLI writes to .env.local.
         load_dotenv()
+        env_local = pathlib.Path(".env.local")
+        if env_local.exists():
+            load_dotenv(dotenv_path=env_local, override=True)
 
     from app.config import get_config
     from app.db import init_db

@@ -5,6 +5,50 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from sqlalchemy.engine import URL
+
+
+def resolve_database_url() -> str:
+    """Resolve DB connection string.
+
+    Priority:
+      1) DATABASE_URL (explicit)
+      2) Build from PG* env vars (common Postgres convention)
+      3) Fallback to local sqlite
+    """
+
+    explicit = os.getenv("DATABASE_URL")
+    if explicit:
+        return explicit
+
+    host = os.getenv("PGHOST")
+    user = os.getenv("PGUSER")
+    database = os.getenv("PGDATABASE")
+    port_raw = os.getenv("PGPORT")
+
+    if host and user and database:
+        password = os.getenv("PGPASSWORD")
+        sslmode = os.getenv("PGSSLMODE", "require")
+
+        try:
+            port = int(port_raw) if port_raw else 5432
+        except ValueError:
+            port = 5432
+
+        query = {"sslmode": sslmode} if sslmode else {}
+        url = URL.create(
+            drivername="postgresql+psycopg2",
+            username=user,
+            password=password,
+            host=host,
+            port=port,
+            database=database,
+            query=query,
+        )
+        return str(url)
+
+    return "sqlite:///./app.db"
+
 
 @dataclass(frozen=True)
 class BaseConfig:
@@ -12,7 +56,7 @@ class BaseConfig:
 
     APP_ENV: str = os.getenv("APP_ENV", "development")
     SECRET_KEY: str = os.getenv("SECRET_KEY", "dev-secret")
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./app.db")
+    DATABASE_URL: str = resolve_database_url()
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
 

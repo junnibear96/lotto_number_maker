@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from flask import Blueprint, request
 
-from app.db import get_session
+from app.db import get_optional_session
 from app.schemas.draw import DrawRequestSchema, DrawResponseSchema
 from app.services.draw_service import DrawService
 from app.utils.responses import ok
@@ -22,7 +22,7 @@ def draw_numbers():
     payload = request.get_json(silent=True) or {}
     data = _request_schema.load(payload)
 
-    session = get_session()
+    session = get_optional_session()
 
     count = int(data.get("count") or 1)
     if count <= 1:

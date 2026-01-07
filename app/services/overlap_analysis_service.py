@@ -6,9 +6,6 @@ from dataclasses import dataclass
 from itertools import combinations
 from typing import Iterable
 
-from sqlalchemy.orm import Session
-
-from app.models.lotto_result import LottoResult
 from app.repositories.lotto_result_repository import LottoResultRepository
 
 
@@ -33,21 +30,21 @@ class OverlapAnalysisService:
         self._repo = repository or LottoResultRepository()
 
     @staticmethod
-    def _main_numbers(draw: LottoResult) -> tuple[int, int, int, int, int, int]:
+    def _main_numbers(draw: object) -> tuple[int, int, int, int, int, int]:
         return (
-            int(draw.number1),
-            int(draw.number2),
-            int(draw.number3),
-            int(draw.number4),
-            int(draw.number5),
-            int(draw.number6),
+            int(getattr(draw, "number1")),
+            int(getattr(draw, "number2")),
+            int(getattr(draw, "number3")),
+            int(getattr(draw, "number4")),
+            int(getattr(draw, "number5")),
+            int(getattr(draw, "number6")),
         )
 
     @staticmethod
     def _normalize(numbers: Iterable[int]) -> tuple[int, ...]:
         return tuple(sorted(int(n) for n in numbers))
 
-    def analyze(self, session: Session) -> OverlapAnalysisResult:
+    def analyze(self, session: object | None) -> OverlapAnalysisResult:
         """Compute overlap sets across all draws.
 
         Definitions:
@@ -74,9 +71,9 @@ class OverlapAnalysisService:
         second_sub5_to_draws: dict[NumberTuple5, set[int]] = {}
 
         for draw in draws:
-            draw_no = int(draw.draw_no)
+            draw_no = int(getattr(draw, "draw_no"))
             main = self._normalize(self._main_numbers(draw))
-            bonus = int(draw.bonus_number)
+            bonus = int(getattr(draw, "bonus_number"))
 
             first6 = (
                 int(main[0]),

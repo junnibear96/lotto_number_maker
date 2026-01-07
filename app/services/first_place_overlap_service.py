@@ -6,9 +6,6 @@ from dataclasses import dataclass
 from itertools import combinations
 from typing import Iterable
 
-from sqlalchemy.orm import Session
-
-from app.models.lotto_result import LottoResult
 from app.repositories.lotto_result_repository import LottoResultRepository
 
 
@@ -42,21 +39,21 @@ class FirstPlaceOverlapService:
         self._repo = repository or LottoResultRepository()
 
     @staticmethod
-    def _main_numbers(draw: LottoResult) -> NumberTuple6:
+    def _main_numbers(draw: object) -> NumberTuple6:
         return (
-            int(draw.number1),
-            int(draw.number2),
-            int(draw.number3),
-            int(draw.number4),
-            int(draw.number5),
-            int(draw.number6),
+            int(getattr(draw, "number1")),
+            int(getattr(draw, "number2")),
+            int(getattr(draw, "number3")),
+            int(getattr(draw, "number4")),
+            int(getattr(draw, "number5")),
+            int(getattr(draw, "number6")),
         )
 
     @staticmethod
     def _normalize(numbers: Iterable[int]) -> tuple[int, ...]:
         return tuple(sorted(int(n) for n in numbers))
 
-    def analyze(self, session: Session) -> FirstPlaceOverlapResult:
+    def analyze(self, session: object | None) -> FirstPlaceOverlapResult:
         """Generate 2nd/3rd prize sets for each draw and match against other draws.
 
         Matching rules (normalized sorted tuples):
@@ -76,7 +73,7 @@ class FirstPlaceOverlapService:
         first5_to_draws: dict[NumberTuple5, set[int]] = {}
 
         for draw in draws:
-            draw_no = int(draw.draw_no)
+            draw_no = int(getattr(draw, "draw_no"))
             first6 = self._normalize(self._main_numbers(draw))
             first6_typed: NumberTuple6 = (
                 int(first6[0]),
@@ -102,9 +99,9 @@ class FirstPlaceOverlapService:
         overlaps: list[FirstPlaceOverlap] = []
 
         for draw in draws:
-            source_draw = int(draw.draw_no)
+            source_draw = int(getattr(draw, "draw_no"))
             main = self._normalize(self._main_numbers(draw))
-            bonus = int(draw.bonus_number)
+            bonus = int(getattr(draw, "bonus_number"))
 
             # SECOND: (5 main + bonus) as 6-number set.
             for comb5 in combinations(main, 5):

@@ -56,7 +56,17 @@ class BaseConfig:
 
     APP_ENV: str = os.getenv("APP_ENV", "development")
     SECRET_KEY: str = os.getenv("SECRET_KEY", "dev-secret")
+    DB_BACKEND: str = (
+        os.getenv("DB_BACKEND")
+        or ("mongo" if os.getenv("MONGODB_URI") else "sql")
+    ).lower().strip()  # "sql" | "mongo"
+
+    # SQL backend
     DATABASE_URL: str = resolve_database_url()
+
+    # Mongo backend
+    MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+    MONGODB_DB: str = os.getenv("MONGODB_DB", "lotto_number_maker")
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
 

@@ -8,13 +8,36 @@ from __future__ import annotations
 import os
 from typing import Callable
 
-from flask import Flask, g
+from flask import Flask, current_app, g
 from sqlalchemy.engine import make_url
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.models.base import Base
+
+
+def get_db_backend() -> str:
+    app = current_app
+    return str(app.config.get("DB_BACKEND") or "sql").lower().strip()
+
+
+def init_mongo(app: Flask) -> None:
+    """Initialize MongoDB client and store it on app.extensions."""
+
+    try:
+        from pymongo import MongoClient
+    except Exception as exc:  # pragma: no cover
+        raise RuntimeError("pymongo is required for DB_BACKEND=mongo") from exc
+
+    uri = str(app.config.get("MONGODB_URI") or "mongodb://localhost:27017")
+    db_name = str(app.config.get("MONGODB_DB") or "lotto_number_maker")
+
+    client = MongoClient(uri)
+    db = client[db_name]
+
+    app.extensions["mongo_client"] = client
+    app.extensions["mongo_db"] = db
 
 
 def _assume_role_with_vercel_oidc(region: str) -> dict[str, str] | None:
@@ -114,6 +137,11 @@ def _create_engine(database_url: str) -> Engine:
 def init_db(app: Flask) -> None:
     """Initialize database engine and per-request sessions."""
 
+    backend = str(app.config.get("DB_BACKEND") or "sql").lower().strip()
+    if backend == "mongo":
+        init_mongo(app)
+        return
+
     engine = create_app_engine(str(app.config["DATABASE_URL"]))
     session_factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
@@ -145,7 +173,30 @@ def init_db(app: Flask) -> None:
 def get_session() -> Session:
     """Get the current request's SQLAlchemy session."""
 
+    if get_db_backend() != "sql":
+        raise RuntimeError("SQLAlchemy session is not available when DB_BACKEND != sql")
+
     session: Session | None = getattr(g, "db", None)
     if session is None:
         raise RuntimeError("Database session not initialized")
     return session
+
+
+def get_optional_session() -> Session | None:
+    """Return SQLAlchemy session if configured, else None."""
+
+    if get_db_backend() != "sql":
+        return None
+    return get_session()
+
+
+def get_mongo_db():
+    """Get the configured MongoDB database."""
+
+    if get_db_backend() != "mongo":
+        raise RuntimeError("MongoDB is not available when DB_BACKEND != mongo")
+
+    db = current_app.extensions.get("mongo_db")
+    if db is None:
+        raise RuntimeError("MongoDB not initialized")
+    return db

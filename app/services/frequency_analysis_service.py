@@ -5,10 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from math import ceil
 
-from sqlalchemy import desc, func, select
-from sqlalchemy.orm import Session
-
-from app.models.lotto_result import LottoResult
+from app.repositories.lotto_result_repository import LottoResultRepository
 
 
 @dataclass(frozen=True)
@@ -28,33 +25,33 @@ class FrequencyAnalysisResult:
 class FrequencyAnalysisService:
     """Compute number frequency across all or recent draws."""
 
-    def analyze(self, session: Session, *, recent_n: int | None = None, percent: float = 0.2) -> FrequencyAnalysisResult:
+    def __init__(self, repository: LottoResultRepository | None = None) -> None:
+        self._repo = repository or LottoResultRepository()
+
+    def analyze(self, session: object | None, *, recent_n: int | None = None, percent: float = 0.2) -> FrequencyAnalysisResult:
         if recent_n is not None and recent_n <= 0:
             raise ValueError("recent_n must be positive")
         if not (0.0 < float(percent) < 1.0):
             raise ValueError("percent must be between 0 and 1")
 
-        total_draws_in_db = int(
-            session.scalar(select(func.count()).select_from(LottoResult)) or 0
-        )
+        draws_all = list(self._repo.list_all(session))
+        total_draws_in_db = int(len(draws_all))
 
-        stmt = select(LottoResult)
         if recent_n is not None:
-            stmt = stmt.order_by(desc(LottoResult.draw_no)).limit(int(recent_n))
+            # Draws are sorted ascending by draw_no; take the last N.
+            draws = draws_all[-int(recent_n):]
         else:
-            stmt = stmt.order_by(LottoResult.draw_no.asc())
-
-        draws = list(session.scalars(stmt).all())
+            draws = draws_all
 
         counts: dict[int, int] = {n: 0 for n in range(1, 46)}
         for d in draws:
             nums = [
-                int(d.number1),
-                int(d.number2),
-                int(d.number3),
-                int(d.number4),
-                int(d.number5),
-                int(d.number6),
+                int(getattr(d, "number1")),
+                int(getattr(d, "number2")),
+                int(getattr(d, "number3")),
+                int(getattr(d, "number4")),
+                int(getattr(d, "number5")),
+                int(getattr(d, "number6")),
             ]
             for n in nums:
                 if 1 <= n <= 45:

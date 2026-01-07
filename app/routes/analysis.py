@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from flask import Blueprint, request
 
-from app.db import get_session
+from app.db import get_optional_session
 from app.errors import ValidationError
 from app.services.frequency_analysis_service import FrequencyAnalysisService
 from app.services.first_place_overlap_service import FirstPlaceOverlapService
@@ -19,7 +19,7 @@ _frequency_service = FrequencyAnalysisService()
 
 @analysis_bp.get("/analysis/overlap")
 def get_overlap_analysis():
-    session = get_session()
+    session = get_optional_session()
     result = _service.analyze(session)
 
     return ok(
@@ -36,7 +36,7 @@ def get_overlap_analysis():
 
 @analysis_bp.get("/analysis/first-place-overlap")
 def get_first_place_overlap():
-    session = get_session()
+    session = get_optional_session()
     result = _first_place_service.analyze(session)
 
     return ok(
@@ -85,7 +85,7 @@ def get_frequency_analysis():
         if not (0.0 < percent < 1.0):
             raise ValidationError("percent must be between 0 and 1")
 
-    session = get_session()
+    session = get_optional_session()
     result = _frequency_service.analyze(session, recent_n=recent_n, percent=percent)
 
     return ok(

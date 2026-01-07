@@ -9,8 +9,6 @@ from itertools import combinations
 from threading import Lock
 from typing import Iterable
 
-from sqlalchemy.orm import Session
-
 from app.errors import AppError, ValidationError
 from app.repositories.lotto_result_repository import LottoResultRepository
 
@@ -44,7 +42,7 @@ class _HistoricalCache:
     def _normalize(numbers: Iterable[int]) -> tuple[int, ...]:
         return tuple(sorted(int(n) for n in numbers))
 
-    def ensure_loaded(self, session: Session) -> HistoricalExclusionSets:
+    def ensure_loaded(self, session: object | None) -> HistoricalExclusionSets:
         if self._loaded and self._sets is not None:
             return self._sets
 
@@ -197,7 +195,7 @@ class DrawService:
 
     def draw(
         self,
-        session: Session,
+        session: object | None,
         exclude_mode: str,
         exclude_numbers: Iterable[int] | None = None,
         exclude_draws: Iterable[Iterable[int]] | None = None,
@@ -305,7 +303,7 @@ class DrawService:
 
     def draw_many(
         self,
-        session: Session,
+        session: object | None,
         exclude_mode: str,
         exclude_numbers: Iterable[int] | None = None,
         exclude_draws: Iterable[Iterable[int]] | None = None,

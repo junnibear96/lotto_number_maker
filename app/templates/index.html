@@ -29,6 +29,7 @@
       .muted { color: var(--muted); }
       .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin: 16px 0; }
       .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+      .controls-row { margin-left: auto; justify-content: flex-end; flex: 1; }
       .stack { display:flex; flex-direction: column; gap: 6px; }
       .stack-right { align-items: flex-end; text-align: right; }
       label { font-weight: 600; }
@@ -58,10 +59,11 @@
       details.overlap-details > summary { cursor: pointer; font-weight: 800; }
       details.overlap-details[open] > summary { margin-bottom: 10px; }
       .history { display: grid; gap: 10px; }
-      .history-item { display: flex; gap: 12px; align-items: center; justify-content: space-between; border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: rgba(255,255,255,0.02); }
+      .history-item { position: relative; display: flex; gap: 12px; align-items: center; justify-content: space-between; border: 1px solid var(--border); border-radius: 12px; padding: 12px; padding-right: 52px; background: rgba(255,255,255,0.02); }
       .history-left { display: flex; flex-direction: column; gap: 6px; min-width: 220px; }
       .history-title { font-weight: 700; }
       .history-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-end; }
+      .history-delete { position: absolute; top: -12px; right: -12px; width: 30px; height: 30px; padding: 0; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; line-height: 1; background: var(--card); box-shadow: 0 0 0 3px var(--card); }
       .btn-secondary { background: rgba(255,255,255,0.06); border: 1px solid var(--border); font-weight: 700; }
       .modal-backdrop { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(11,18,32,0.6); z-index: 50; }
       .modal-backdrop[hidden] { display: none !important; }
@@ -88,6 +90,8 @@
           </div>
           <div class="row" style="justify-content: flex-end;">
             <button id="goOverlaps" type="button" class="btn-secondary">겹치는 조합 보기</button>
+            <button id="goFrequency" type="button" class="btn-secondary">번호 빈도 히트맵</button>
+            <button id="goSimulator" type="button" class="btn-secondary">당첨 확률 시뮬레이터</button>
           </div>
         </div>
       </header>
@@ -123,12 +127,12 @@
       </section>
 
       <section class="card" aria-label="Draw controls">
-        <div class="row" style="justify-content: space-between;">
+        <div class="row" style="justify-content: space-between; align-items: flex-start;">
           <div>
             <label for="mode">제외 옵션</label>
             <div class="muted">어떤 과거 조합을 피할지 선택하세요.</div>
           </div>
-          <div class="row">
+          <div class="row controls-row">
             <div class="stack stack-right">
               <label for="excludeNumbers" class="muted" style="font-weight: 700;">제외할 번호 (선택)</label>
               <input
@@ -140,6 +144,19 @@
                 aria-label="제외할 번호 입력"
               />
               <div class="muted" style="font-size: 13px;">쉼표/공백으로 구분. 1~45, 최대 39개까지.</div>
+            </div>
+
+            <div class="stack stack-right">
+              <label for="fixedNumbers" class="muted" style="font-weight: 700;">고정 번호 (선택)</label>
+              <input
+                id="fixedNumbers"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                placeholder="예: 7 또는 7, 13"
+                aria-label="고정 번호 입력"
+              />
+              <div class="muted" style="font-size: 13px;">1~45, 최대 2개. 나머지만 랜덤.</div>
             </div>
 
             <div class="stack stack-right">
@@ -165,6 +182,103 @@
             <button id="drawBtn" type="button">뽑기</button>
           </div>
         </div>
+
+        <div style="margin-top: 12px;">
+          <details class="overlap-details" id="advancedAccordion">
+            <summary>
+              고급 옵션
+              <span id="advancedSummaryInline" class="muted" style="margin-left: 8px; font-weight: 600; font-size: 13px;"></span>
+            </summary>
+
+            <div id="advancedSummary" class="muted" style="margin-top: 8px;">현재: 연속=상관없음 · 끝수중복=허용 · 구간필터=OFF</div>
+
+            <div class="row" style="justify-content: space-between; align-items: flex-start; margin-top: 10px;">
+              <div class="stack" style="gap: 10px; flex: 1; min-width: 260px;">
+                <div class="muted" style="font-weight: 800;">조건부 필터 뽑기</div>
+                <div class="muted" style="font-size: 13px;">체크/슬라이더로 조합 성향을 제어합니다. (선택사항)</div>
+
+                <div class="row" style="align-items: center;">
+                  <label class="muted" style="font-weight: 800;">연속 번호</label>
+                  <label class="chip" style="cursor: pointer;">
+                    <input type="radio" name="optConsecutive" value="ALLOW" checked style="margin-right: 8px;" />
+                    상관없음
+                  </label>
+                  <label class="chip" style="cursor: pointer;">
+                    <input type="radio" name="optConsecutive" value="REQUIRE" style="margin-right: 8px;" />
+                    포함
+                  </label>
+                  <label class="chip" style="cursor: pointer;">
+                    <input type="radio" name="optConsecutive" value="FORBID" style="margin-right: 8px;" />
+                    제외
+                  </label>
+                </div>
+
+                <div class="row" style="align-items: center;">
+                  <label class="muted" style="font-weight: 800;">끝수 중복</label>
+                  <label class="chip" style="cursor: pointer;">
+                    <input type="radio" name="optLastDigit" value="ALLOW" checked style="margin-right: 8px;" />
+                    허용
+                  </label>
+                  <label class="chip" style="cursor: pointer;">
+                    <input type="radio" name="optLastDigit" value="FORBID" style="margin-right: 8px;" />
+                    제외 (예: 3,13,23)
+                  </label>
+                </div>
+              </div>
+
+              <div class="stack" style="gap: 10px; flex: 1; min-width: 260px; align-items: flex-end; text-align: right;">
+                <div class="muted" style="font-weight: 800;">특정 구간 최소/최대 개수</div>
+
+                <div class="row" style="justify-content: flex-end; align-items: center;">
+                  <label class="chip" style="cursor: pointer;">
+                    <input id="optRangeEnabled" type="checkbox" style="margin-right: 8px;" />
+                    구간 필터 사용
+                  </label>
+                </div>
+
+                <div class="row" style="justify-content: flex-end; align-items: center;">
+                  <label for="optRangeBucket" class="muted" style="font-weight: 800;">구간</label>
+                  <select id="optRangeBucket" aria-label="구간 선택">
+                    <option value="1-10">1~10</option>
+                    <option value="11-20">11~20</option>
+                    <option value="21-30">21~30</option>
+                    <option value="31-40">31~40</option>
+                    <option value="41-45">41~45</option>
+                  </select>
+                </div>
+
+                <div class="stack" style="gap: 8px; width: 100%;">
+                  <div class="row" style="justify-content: flex-end; align-items: center;">
+                    <span class="muted" style="font-weight: 800;">최소</span>
+                    <input id="optRangeMin" type="range" min="0" max="6" step="1" value="0" style="flex: 1;" />
+                    <span id="optRangeMinVal" class="chip">0</span>
+                  </div>
+                  <div class="row" style="justify-content: flex-end; align-items: center;">
+                    <span class="muted" style="font-weight: 800;">최대</span>
+                    <input id="optRangeMax" type="range" min="0" max="6" step="1" value="6" style="flex: 1;" />
+                    <span id="optRangeMaxVal" class="chip">6</span>
+                  </div>
+                </div>
+
+                <div class="muted" style="font-size: 13px;">예: 1~10 구간에서 2~3개 포함</div>
+              </div>
+            </div>
+
+            <div style="margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px;">
+              <div class="row" style="justify-content: space-between; align-items: flex-start; gap: 12px;">
+                <div class="stack" style="gap: 8px; flex: 1; min-width: 260px;">
+                  <div class="muted" style="font-weight: 800;">히스토리 제외 (선택)</div>
+                  <div class="muted" style="font-size: 13px;">선택한 히스토리의 “6개 조합”이 다시 나오지 않게 제외합니다.</div>
+                  <div id="historyExcludeList" class="stack" style="gap: 8px;"></div>
+                </div>
+                <div class="stack" style="gap: 8px; align-items: flex-end; text-align: right;">
+                  <button id="historyExcludeClear" type="button" class="btn-secondary">전체 해제</button>
+                  <div class="muted" style="font-size: 13px;">(여러 개 선택 가능)</div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
       </section>
 
       <section class="card" aria-label="Draw result">
@@ -174,6 +288,13 @@
           <summary class="muted">원본 응답(JSON)</summary>
           <pre id="result"></pre>
         </details>
+      </section>
+
+      <section class="card" aria-label="Analysis summary">
+        <h2 style="margin: 0 0 8px 0;">분석 요약</h2>
+        <div class="muted" style="margin-bottom: 12px;">번호 합계 / 홀짝 비율 / 구간 분포(1~10, 11~20, …)</div>
+        <div id="analysisSummary" class="list" aria-live="polite"></div>
+        <div id="analysisSummaryEmpty" class="muted">결과가 나오면 자동으로 분석됩니다.</div>
       </section>
 
       <section class="card" aria-label="Draw history">
@@ -195,6 +316,7 @@
         <h3 id="appAlertTitle" class="modal-title">알림</h3>
         <p id="appAlertMessage" class="modal-message"></p>
         <div class="modal-actions">
+          <button id="appAlertCancel" type="button" class="btn-secondary">취소</button>
           <button id="appAlertOk" type="button">확인</button>
         </div>
       </div>
@@ -208,10 +330,13 @@
     <script>
       const resultEl = document.getElementById('result');
       const numbersEl = document.getElementById('numbers');
+      const analysisSummaryEl = document.getElementById('analysisSummary');
+      const analysisSummaryEmptyEl = document.getElementById('analysisSummaryEmpty');
       const modeEl = document.getElementById('mode');
       const redrawBtn = document.getElementById('drawBtn');
       const randomBtn = document.getElementById('randomBtn');
       const excludeNumbersEl = document.getElementById('excludeNumbers');
+      const fixedNumbersEl = document.getElementById('fixedNumbers');
       const drawCountEl = document.getElementById('drawCount');
       const historyEl = document.getElementById('history');
       const historyEmptyEl = document.getElementById('historyEmpty');
@@ -221,9 +346,24 @@
       const appAlertTitleEl = document.getElementById('appAlertTitle');
       const appAlertMessageEl = document.getElementById('appAlertMessage');
       const appAlertOkEl = document.getElementById('appAlertOk');
+      const appAlertCancelEl = document.getElementById('appAlertCancel');
       const appToastEl = document.getElementById('appToast');
       const appToastTitleEl = document.getElementById('appToastTitle');
       const appToastMessageEl = document.getElementById('appToastMessage');
+
+      const optConsecutiveEls = document.querySelectorAll('input[name="optConsecutive"]');
+      const optLastDigitEls = document.querySelectorAll('input[name="optLastDigit"]');
+      const optRangeEnabledEl = document.getElementById('optRangeEnabled');
+      const optRangeBucketEl = document.getElementById('optRangeBucket');
+      const optRangeMinEl = document.getElementById('optRangeMin');
+      const optRangeMaxEl = document.getElementById('optRangeMax');
+      const optRangeMinValEl = document.getElementById('optRangeMinVal');
+      const optRangeMaxValEl = document.getElementById('optRangeMaxVal');
+      const advancedSummaryEl = document.getElementById('advancedSummary');
+      const advancedSummaryInlineEl = document.getElementById('advancedSummaryInline');
+
+      const historyExcludeListEl = document.getElementById('historyExcludeList');
+      const historyExcludeClearEl = document.getElementById('historyExcludeClear');
 
       let toastTimer = null;
 
@@ -233,7 +373,102 @@
         window.location.href = '/overlaps';
       });
 
+      document.getElementById('goFrequency')?.addEventListener('click', () => {
+        window.location.href = '/frequency';
+      });
+
+      document.getElementById('goSimulator')?.addEventListener('click', () => {
+        window.location.href = '/simulator';
+      });
+
       const history = [];
+
+      let historyIdSeq = 1;
+      const excludedHistoryIds = new Set();
+
+      function ensureHistoryItemIds() {
+        history.forEach((item) => {
+          if (!item) return;
+          if (!item.id) item.id = `h${historyIdSeq++}`;
+        });
+      }
+
+      function currentHistoryIndexById(id) {
+        return history.findIndex((it) => it?.id === id);
+      }
+
+      function getExcludeDrawsFromHistorySelection() {
+        if (!excludedHistoryIds.size) return [];
+        const out = [];
+        Array.from(excludedHistoryIds).forEach((id) => {
+          const idx = currentHistoryIndexById(id);
+          const item = idx >= 0 ? history[idx] : null;
+          if (!item || !Array.isArray(item.numbers) || item.numbers.length !== 6) return;
+          out.push(item.numbers);
+        });
+        return out;
+      }
+
+      function renderHistoryExcludeUI() {
+        if (!historyExcludeListEl) return;
+        ensureHistoryItemIds();
+
+        Array.from(excludedHistoryIds).forEach((id) => {
+          if (currentHistoryIndexById(id) < 0) excludedHistoryIds.delete(id);
+        });
+
+        historyExcludeListEl.innerHTML = '';
+
+        if (!history.length) {
+          const empty = document.createElement('div');
+          empty.className = 'muted';
+          empty.style.fontSize = '13px';
+          empty.textContent = '히스토리가 없어요. (결과를 뽑으면 목록이 생깁니다)';
+          historyExcludeListEl.appendChild(empty);
+          syncAdvancedUI();
+          return;
+        }
+
+        history.forEach((item, idx) => {
+          if (!item || !Array.isArray(item.numbers) || item.numbers.length !== 6) return;
+
+          const label = document.createElement('label');
+          label.style.display = 'flex';
+          label.style.alignItems = 'center';
+          label.style.gap = '10px';
+          label.style.padding = '8px 10px';
+          label.style.borderRadius = '10px';
+          label.style.border = '1px solid var(--border)';
+          label.style.background = 'rgba(255,255,255,0.03)';
+          label.style.cursor = 'pointer';
+
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = excludedHistoryIds.has(item.id);
+          cb.addEventListener('change', () => {
+            if (cb.checked) excludedHistoryIds.add(item.id);
+            else excludedHistoryIds.delete(item.id);
+            syncAdvancedUI();
+          });
+
+          const text = document.createElement('div');
+          text.className = 'muted';
+          text.style.fontWeight = '800';
+          text.style.flex = '1';
+          text.textContent = `#${idx + 1}  ${item.numbers.join(', ')}`;
+
+          label.appendChild(cb);
+          label.appendChild(text);
+          historyExcludeListEl.appendChild(label);
+        });
+
+        syncAdvancedUI();
+      }
+
+      historyExcludeClearEl?.addEventListener('click', () => {
+        excludedHistoryIds.clear();
+        renderHistoryExcludeUI();
+      });
 
       const MODE_OPTIONS = [
         { value: 'NONE', label: '랜덤 뽑기 (제외 없음)' },
@@ -249,6 +484,7 @@
           alert(String(message));
           return;
         }
+        if (appAlertCancelEl) appAlertCancelEl.style.display = 'none';
         appAlertTitleEl.textContent = String(title);
         appAlertMessageEl.textContent = String(message);
         appAlertEl.hidden = false;
@@ -259,6 +495,42 @@
         if (!appAlertEl) return;
         appAlertEl.hidden = true;
       }
+
+      let confirmResolver = null;
+
+      function showConfirm(message, title = '확인') {
+        return new Promise((resolve) => {
+          if (!appAlertEl || !appAlertTitleEl || !appAlertMessageEl) {
+            resolve(window.confirm(String(message)));
+            return;
+          }
+
+          confirmResolver = resolve;
+          if (appAlertCancelEl) appAlertCancelEl.style.display = '';
+          appAlertTitleEl.textContent = String(title);
+          appAlertMessageEl.textContent = String(message);
+          appAlertEl.hidden = false;
+          appAlertOkEl?.focus();
+        });
+      }
+
+      appAlertOkEl?.addEventListener('click', () => {
+        hideAlert();
+        if (typeof confirmResolver === 'function') {
+          const r = confirmResolver;
+          confirmResolver = null;
+          r(true);
+        }
+      });
+
+      appAlertCancelEl?.addEventListener('click', () => {
+        hideAlert();
+        if (typeof confirmResolver === 'function') {
+          const r = confirmResolver;
+          confirmResolver = null;
+          r(false);
+        }
+      });
 
       // Defensive: ensure modal is not visible on initial load.
       hideAlert();
@@ -276,6 +548,91 @@
           appToastEl.hidden = true;
           toastTimer = null;
         }, ms);
+      }
+
+      function syncAdvancedUI() {
+        const mn = Number.parseInt(String(optRangeMinEl?.value ?? '0'), 10);
+        const mx = Number.parseInt(String(optRangeMaxEl?.value ?? '6'), 10);
+        const fixedMin = Number.isInteger(mn) ? mn : 0;
+        let fixedMax = Number.isInteger(mx) ? mx : 6;
+        if (fixedMin > fixedMax) {
+          fixedMax = fixedMin;
+          if (optRangeMaxEl) optRangeMaxEl.value = String(fixedMax);
+        }
+        if (optRangeMinValEl) optRangeMinValEl.textContent = String(fixedMin);
+        if (optRangeMaxValEl) optRangeMaxValEl.textContent = String(fixedMax);
+
+        const enabled = Boolean(optRangeEnabledEl?.checked);
+        const controls = [optRangeBucketEl, optRangeMinEl, optRangeMaxEl];
+        controls.forEach((el) => {
+          if (!el) return;
+          el.disabled = !enabled;
+          el.style.opacity = enabled ? '1' : '0.6';
+        });
+
+        // Summary line
+        const consecutiveMode = String(document.querySelector('input[name="optConsecutive"]:checked')?.value ?? 'ALLOW');
+        const lastDigitMode = String(document.querySelector('input[name="optLastDigit"]:checked')?.value ?? 'ALLOW');
+
+        const consecutiveLabel = consecutiveMode === 'REQUIRE' ? '포함' : (consecutiveMode === 'FORBID' ? '제외' : '상관없음');
+        const lastDigitLabel = lastDigitMode === 'FORBID' ? '제외' : '허용';
+
+        let rangeLabel = 'OFF';
+        if (enabled) {
+          const bucket = String(optRangeBucketEl?.value ?? '1~10').replace('-', '~');
+          rangeLabel = `${bucket} ${fixedMin}~${fixedMax}개`;
+        }
+
+        let historyLabel = '없음';
+        if (excludedHistoryIds.size) {
+          const idxs = Array.from(excludedHistoryIds)
+            .map((id) => currentHistoryIndexById(id))
+            .filter((i) => i >= 0)
+            .map((i) => i + 1)
+            .sort((a, b) => a - b);
+
+          if (idxs.length) {
+            const head = idxs.slice(0, 4).map((n) => `#${n}`).join(',');
+            historyLabel = idxs.length > 4 ? `${head}…(${idxs.length}개)` : head;
+          }
+        }
+
+        const summaryText = `현재: 연속=${consecutiveLabel} · 끝수중복=${lastDigitLabel} · 구간필터=${rangeLabel} · 히스토리제외=${historyLabel}`;
+
+        if (advancedSummaryEl) {
+          advancedSummaryEl.textContent = summaryText;
+        }
+        if (advancedSummaryInlineEl) {
+          advancedSummaryInlineEl.textContent = summaryText;
+        }
+      }
+
+      optConsecutiveEls?.forEach((el) => el.addEventListener('change', syncAdvancedUI));
+      optLastDigitEls?.forEach((el) => el.addEventListener('change', syncAdvancedUI));
+      optRangeEnabledEl?.addEventListener('change', syncAdvancedUI);
+      optRangeMinEl?.addEventListener('input', syncAdvancedUI);
+      optRangeMaxEl?.addEventListener('input', syncAdvancedUI);
+      syncAdvancedUI();
+
+      function getAdvancedOptionsFromUI() {
+        const consecutive_mode = String(document.querySelector('input[name="optConsecutive"]:checked')?.value ?? 'ALLOW');
+        const last_digit_mode = String(document.querySelector('input[name="optLastDigit"]:checked')?.value ?? 'ALLOW');
+
+        const enabled = Boolean(optRangeEnabledEl?.checked);
+        const bucket = String(optRangeBucketEl?.value ?? '1-10');
+        const min_count = Number.parseInt(String(optRangeMinEl?.value ?? '0'), 10);
+        const max_count = Number.parseInt(String(optRangeMaxEl?.value ?? '6'), 10);
+
+        return {
+          consecutive_mode,
+          last_digit_mode,
+          range_filter: {
+            enabled,
+            bucket,
+            min_count: Number.isInteger(min_count) ? min_count : 0,
+            max_count: Number.isInteger(max_count) ? max_count : 6,
+          }
+        };
       }
 
       appAlertOkEl?.addEventListener('click', hideAlert);
@@ -465,6 +822,117 @@
         return { res, json };
       }
 
+      function clearEl(el) {
+        if (!el) return;
+        while (el.firstChild) el.removeChild(el.firstChild);
+      }
+
+      function analyzeNumbers(nums) {
+        const numbers = (Array.isArray(nums) ? nums : []).map((n) => Number(n)).filter((n) => Number.isInteger(n));
+        const sum = numbers.reduce((acc, n) => acc + n, 0);
+        const odd = numbers.filter((n) => n % 2 === 1).length;
+        const even = numbers.length - odd;
+
+        const step = 20;
+        const bandStart = Math.floor(sum / step) * step;
+        const bandEnd = bandStart + step - 1;
+        const band = `${bandStart}~${bandEnd}`;
+
+        const bins = [
+          { label: '1~10', min: 1, max: 10 },
+          { label: '11~20', min: 11, max: 20 },
+          { label: '21~30', min: 21, max: 30 },
+          { label: '31~40', min: 31, max: 40 },
+          { label: '41~45', min: 41, max: 45 },
+        ];
+        const dist = bins.map((b) => {
+          const c = numbers.filter((n) => n >= b.min && n <= b.max).length;
+          return { label: b.label, count: c };
+        });
+
+        return { sum, band, odd, even, dist };
+      }
+
+      function renderAnalysisSummary(drawn) {
+        if (!analysisSummaryEl) return;
+        clearEl(analysisSummaryEl);
+
+        const rows = [];
+        if (Array.isArray(drawn) && drawn.length && Array.isArray(drawn[0])) {
+          // multi draw
+          drawn.forEach((row) => {
+            if (Array.isArray(row) && row.length === 6) rows.push(row);
+          });
+        } else if (Array.isArray(drawn) && drawn.length === 6) {
+          rows.push(drawn);
+        }
+
+        if (!rows.length) {
+          if (analysisSummaryEmptyEl) analysisSummaryEmptyEl.style.display = 'block';
+          return;
+        }
+
+        if (analysisSummaryEmptyEl) analysisSummaryEmptyEl.style.display = 'none';
+
+        rows.forEach((nums, idx) => {
+          const a = analyzeNumbers(nums);
+
+          const item = document.createElement('div');
+          item.className = 'list-item';
+
+          const title = document.createElement('div');
+          title.className = 'list-title';
+          title.textContent = rows.length > 1 ? `#${idx + 1} 분석` : '현재 결과 분석';
+
+          const grid = document.createElement('div');
+          grid.className = 'grid';
+          grid.style.marginTop = '10px';
+
+          const s1 = document.createElement('div');
+          s1.className = 'stat';
+          const s1Label = document.createElement('span');
+          s1Label.className = 'label';
+          s1Label.textContent = '번호 합계';
+          const s1Value = document.createElement('div');
+          s1Value.className = 'value';
+          s1Value.textContent = `${a.sum} (구간 ${a.band})`;
+          s1.appendChild(s1Label);
+          s1.appendChild(s1Value);
+
+          const s2 = document.createElement('div');
+          s2.className = 'stat';
+          const s2Label = document.createElement('span');
+          s2Label.className = 'label';
+          s2Label.textContent = '홀수:짝수';
+          const s2Value = document.createElement('div');
+          s2Value.className = 'value';
+          s2Value.textContent = `${a.odd}:${a.even}`;
+          s2.appendChild(s2Label);
+          s2.appendChild(s2Value);
+
+          const s3 = document.createElement('div');
+          s3.className = 'stat';
+          const s3Label = document.createElement('span');
+          s3Label.className = 'label';
+          s3Label.textContent = '구간 분포';
+          const s3Value = document.createElement('div');
+          s3Value.className = 'value';
+          s3Value.style.fontSize = '14px';
+          s3Value.style.fontWeight = '800';
+          s3Value.textContent = a.dist.map((d) => `${d.label}:${d.count}`).join(' / ');
+          s3.appendChild(s3Label);
+          s3.appendChild(s3Value);
+
+          grid.appendChild(s1);
+          grid.appendChild(s2);
+          grid.appendChild(s3);
+
+          item.appendChild(title);
+          item.appendChild(grid);
+          analysisSummaryEl.appendChild(item);
+        });
+      }
+
       function showDrawResult(payload) {
         const data = payload?.data ?? {};
         const draws = data?.draws;
@@ -502,6 +970,7 @@
             numbersEl.appendChild(line);
           });
           resultEl.textContent = JSON.stringify(payload, null, 2);
+          renderAnalysisSummary(draws);
           return draws;
         }
 
@@ -509,10 +978,12 @@
         if (!Array.isArray(numbers)) {
           setSingleLine('Error');
           resultEl.textContent = JSON.stringify(payload, null, 2);
+          renderAnalysisSummary(null);
           return null;
         }
         setSingleLine(numbers.join(', '));
         resultEl.textContent = JSON.stringify(payload, null, 2);
+        renderAnalysisSummary(numbers);
         return numbers;
       }
 
@@ -547,6 +1018,25 @@
         return unique;
       }
 
+      function parseFixedNumbers(text) {
+        const raw = String(text ?? '').trim();
+        if (!raw) return [];
+
+        const nums = (raw.match(/\d+/g) ?? []).map((n) => Number.parseInt(n, 10));
+        const unique = Array.from(new Set(nums)).filter((n) => Number.isInteger(n));
+
+        const invalid = unique.filter((n) => n < 1 || n > 45);
+        if (invalid.length) {
+          throw new Error(`고정 번호는 1~45만 가능해요. 잘못된 값: ${invalid.join(', ')}`);
+        }
+        if (unique.length > 2) {
+          throw new Error('고정 번호는 최대 2개까지 가능해요.');
+        }
+
+        unique.sort((a, b) => a - b);
+        return unique;
+      }
+
       function getExcludeNumbersFromInput() {
         try {
           return parseExcludeNumbers(excludeNumbersEl?.value);
@@ -554,6 +1044,26 @@
           showAlert(String(e));
           return null;
         }
+      }
+
+      function getFixedNumbersFromInput() {
+        try {
+          return parseFixedNumbers(fixedNumbersEl?.value);
+        } catch (e) {
+          showAlert(String(e));
+          return null;
+        }
+      }
+
+      function validateFixedVsExclude(fixedNums, excludeNums) {
+        const a = new Set(Array.isArray(fixedNums) ? fixedNums : []);
+        const b = new Set(Array.isArray(excludeNums) ? excludeNums : []);
+        const overlap = Array.from(a).filter((n) => b.has(n));
+        if (overlap.length) {
+          showAlert(`고정 번호와 제외 번호가 겹치면 안돼요. 겹치는 값: ${overlap.join(', ')}`);
+          return false;
+        }
+        return true;
       }
 
       function unionNumbers(a, b) {
@@ -577,12 +1087,26 @@
 
       function renderHistory() {
         if (!historyEl) return;
+        ensureHistoryItemIds();
         historyEl.innerHTML = '';
         if (historyEmptyEl) historyEmptyEl.style.display = history.length ? 'none' : 'block';
 
         history.forEach((item, idx) => {
           const row = document.createElement('div');
           row.className = 'history-item';
+
+          const btnDelete = document.createElement('button');
+          btnDelete.type = 'button';
+          btnDelete.className = 'btn-secondary history-delete';
+          btnDelete.textContent = '×';
+          btnDelete.setAttribute('aria-label', '삭제');
+          btnDelete.title = '삭제';
+          btnDelete.addEventListener('click', async () => {
+            const ok = await showConfirm('이 항목을 삭제할까요?', '삭제 확인');
+            if (!ok) return;
+            history.splice(idx, 1);
+            renderHistory();
+          });
 
           const left = document.createElement('div');
           left.className = 'history-left';
@@ -638,9 +1162,22 @@
               const inputExclude = getExcludeNumbersFromInput();
               if (inputExclude === null) return;
 
+              const fixedNums = getFixedNumbersFromInput();
+              if (fixedNums === null) return;
+              if (!validateFixedVsExclude(fixedNums, inputExclude)) return;
+
               const combinedExclude = unionNumbers(inputExclude, excludeNums);
 
-              const { res, json } = await postDraw({ exclude_mode: select.value, exclude_numbers: combinedExclude });
+              const { res, json } = await postDraw({
+                exclude_mode: select.value,
+                exclude_numbers: combinedExclude,
+                exclude_draws: (() => {
+                  const d = getExcludeDrawsFromHistorySelection();
+                  return d.length ? d : undefined;
+                })(),
+                fixed_numbers: fixedNums.length ? fixedNums : undefined,
+                advanced_options: getAdvancedOptionsFromUI(),
+              });
               if (!res.ok || !json.success) {
                 numbersEl.textContent = 'Error';
                 resultEl.textContent = JSON.stringify(json, null, 2);
@@ -670,9 +1207,22 @@
               const inputExclude = getExcludeNumbersFromInput();
               if (inputExclude === null) return;
 
+              const fixedNums = getFixedNumbersFromInput();
+              if (fixedNums === null) return;
+              if (!validateFixedVsExclude(fixedNums, inputExclude)) return;
+
               const combinedExclude = unionNumbers(inputExclude, item.numbers);
 
-              const { res, json } = await postDraw({ exclude_mode: select.value, exclude_numbers: combinedExclude });
+              const { res, json } = await postDraw({
+                exclude_mode: select.value,
+                exclude_numbers: combinedExclude,
+                exclude_draws: (() => {
+                  const d = getExcludeDrawsFromHistorySelection();
+                  return d.length ? d : undefined;
+                })(),
+                fixed_numbers: fixedNums.length ? fixedNums : undefined,
+                advanced_options: getAdvancedOptionsFromUI(),
+              });
               if (!res.ok || !json.success) {
                 numbersEl.textContent = 'Error';
                 resultEl.textContent = JSON.stringify(json, null, 2);
@@ -702,8 +1252,11 @@
 
           row.appendChild(left);
           row.appendChild(actions);
+          row.appendChild(btnDelete);
           historyEl.appendChild(row);
         });
+
+        renderHistoryExcludeUI();
       }
 
       redrawBtn?.addEventListener('click', async () => {
@@ -719,12 +1272,25 @@
             return;
           }
 
+          let fixedNums = [];
+          try {
+            fixedNums = parseFixedNumbers(fixedNumbersEl?.value);
+          } catch (e) {
+            showAlert(String(e));
+            return;
+          }
+          if (!validateFixedVsExclude(fixedNums, excludeNums)) return;
+
           const count = getDrawCount();
           if (count === null) return;
 
           const payload = { exclude_mode: modeEl.value };
           if (excludeNums.length) payload.exclude_numbers = excludeNums;
+          const excludeDraws = getExcludeDrawsFromHistorySelection();
+          if (excludeDraws.length) payload.exclude_draws = excludeDraws;
+          if (fixedNums.length) payload.fixed_numbers = fixedNums;
           if (count > 1) payload.count = count;
+          payload.advanced_options = getAdvancedOptionsFromUI();
 
           const { res, json } = await postDraw(payload);
           if (!res.ok || !json.success) {
@@ -760,7 +1326,19 @@
         numbersEl.textContent = '뽑는 중...';
         resultEl.textContent = '';
         try {
-          const { res, json } = await postDraw({ exclude_mode: 'NONE' });
+          const fixedNums = getFixedNumbersFromInput();
+          if (fixedNums === null) return;
+          const inputExclude = getExcludeNumbersFromInput();
+          if (inputExclude === null) return;
+          if (!validateFixedVsExclude(fixedNums, inputExclude)) return;
+
+          const payload = { exclude_mode: 'NONE', advanced_options: getAdvancedOptionsFromUI() };
+          if (fixedNums.length) payload.fixed_numbers = fixedNums;
+          if (inputExclude.length) payload.exclude_numbers = inputExclude;
+          const excludeDraws = getExcludeDrawsFromHistorySelection();
+          if (excludeDraws.length) payload.exclude_draws = excludeDraws;
+
+          const { res, json } = await postDraw(payload);
           if (!res.ok || !json.success) {
             numbersEl.textContent = 'Error';
             resultEl.textContent = JSON.stringify(json, null, 2);

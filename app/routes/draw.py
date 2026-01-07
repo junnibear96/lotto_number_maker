@@ -30,6 +30,9 @@ def draw_numbers():
             session,
             exclude_mode=str(data["exclude_mode"]),
             exclude_numbers=data.get("exclude_numbers"),
+            exclude_draws=data.get("exclude_draws"),
+            fixed_numbers=data.get("fixed_numbers"),
+            advanced_options=data.get("advanced_options"),
         )
         return ok(_response_schema.dump({"numbers": numbers, "count": 1}))
 
@@ -37,6 +40,9 @@ def draw_numbers():
         session,
         exclude_mode=str(data["exclude_mode"]),
         exclude_numbers=data.get("exclude_numbers"),
+        exclude_draws=data.get("exclude_draws"),
+        fixed_numbers=data.get("fixed_numbers"),
+        advanced_options=data.get("advanced_options"),
         count=count,
     )
     first = draws[0] if draws else []

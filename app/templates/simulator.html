@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>당첨 확률 시뮬레이터</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Cdefs%3E%3CradialGradient%20id='g'%20cx='35%25'%20cy='30%25'%20r='80%25'%3E%3Cstop%20offset='0%25'%20stop-color='%232dd4bf'/%3E%3Cstop%20offset='55%25'%20stop-color='%237c5cff'/%3E%3Cstop%20offset='100%25'%20stop-color='%230b1220'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle%20cx='32'%20cy='32'%20r='28'%20fill='url(%23g)'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='28'%20fill='none'%20stroke='rgba(234,240,255,0.25)'%20stroke-width='2'/%3E%3Ctext%20x='32'%20y='38'%20text-anchor='middle'%20font-family='system-ui,Segoe%20UI,Arial'%20font-size='18'%20font-weight='800'%20fill='%23eaf0ff'%3E6%2F45%3C/text%3E%3C/svg%3E"
+    />
+    <style>
+      :root {
+        --bg: #0b1220;
+        --card: #0f1a2e;
+        --text: #eaf0ff;
+        --muted: #b8c3e6;
+        --border: rgba(234, 240, 255, 0.16);
+        --accent: #7c5cff;
+        --accent-2: #2dd4bf;
+      }
+
+      :root { color-scheme: dark; }
+      body { margin: 0; padding: 24px; line-height: 1.6; background: var(--bg); color: var(--text); }
+      main { max-width: 860px; margin: 0 auto; }
+      h1 { margin: 0 0 8px 0; letter-spacing: -0.02em; }
+      h2 { letter-spacing: -0.01em; }
+      .muted { color: var(--muted); }
+      .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin: 16px 0; }
+      .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+      .stack { display:flex; flex-direction: column; gap: 6px; }
+      label { font-weight: 800; }
+      input, button { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,0.03); color: var(--text); }
+      input:focus, button:focus { outline: 2px solid rgba(124, 92, 255, 0.45); outline-offset: 2px; }
+      button { cursor: pointer; background: linear-gradient(135deg, rgba(124, 92, 255, 0.95), rgba(45, 212, 191, 0.9)); border: 0; font-weight: 900; }
+      button:active { transform: translateY(1px); }
+      .btn-secondary { background: rgba(255,255,255,0.06); border: 1px solid var(--border); font-weight: 800; }
+
+      .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+      .stat { border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: rgba(255,255,255,0.02); }
+      .stat .label { display: block; font-weight: 800; margin-bottom: 6px; color: var(--muted); }
+      .stat .value { font-size: 18px; font-weight: 900; }
+      .list { display: grid; gap: 10px; }
+      .list-item { border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: rgba(255,255,255,0.02); }
+      .list-title { font-weight: 900; letter-spacing: 0.01em; }
+      .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+      .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border); background: rgba(255,255,255,0.03); font-weight: 800; }
+      @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="row" style="justify-content: space-between; align-items: flex-start;">
+          <div>
+            <h1>당첨 확률 시뮬레이터</h1>
+            <div class="muted">N회 자동 구매 시 “적어도 1번” 당첨될 확률과 기대 당첨 횟수를 계산합니다.</div>
+          </div>
+          <div class="row" style="justify-content: flex-end;">
+            <button id="goHome" type="button" class="btn-secondary">홈으로</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="card" aria-label="Controls">
+        <div class="row" style="justify-content: space-between; align-items: flex-start;">
+          <div class="stack">
+            <label for="n">구매 횟수 (N)</label>
+            <input id="n" type="number" min="1" step="1" value="1000" inputmode="numeric" aria-label="구매 횟수" />
+            <div class="muted" style="font-size: 13px;">로또 6/45 한 게임을 1회로 가정합니다.</div>
+          </div>
+          <div class="row" style="justify-content: flex-end; align-items: flex-end;">
+            <button id="calc" type="button">계산</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Headline">
+        <h2 style="margin: 0 0 8px 0;">요약</h2>
+        <div class="muted" id="headline">계산을 눌러주세요.</div>
+        <div class="grid" style="margin-top: 12px;" aria-live="polite">
+          <div class="stat">
+            <span class="label">1등(6개 일치) 최소 1회 이상</span>
+            <div class="value" id="p1">-</div>
+          </div>
+          <div class="stat">
+            <span class="label">2등(5+보너스) 최소 1회 이상</span>
+            <div class="value" id="p2">-</div>
+          </div>
+          <div class="stat">
+            <span class="label">3등(5개 일치) 최소 1회 이상</span>
+            <div class="value" id="p3">-</div>
+          </div>
+          <div class="stat">
+            <span class="label">4등(4개 일치) 최소 1회 이상</span>
+            <div class="value" id="p4">-</div>
+          </div>
+          <div class="stat">
+            <span class="label">5등(3개 일치) 최소 1회 이상</span>
+            <div class="value" id="p5">-</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Details">
+        <h2 style="margin: 0 0 8px 0;">등수별 기대 당첨 횟수</h2>
+        <div class="muted" style="margin-bottom: 12px;">기대값 = $N \times p$ (단일 게임 확률 기준)</div>
+        <div id="expectations" class="list"></div>
+      </section>
+
+      <section class="card" aria-label="Assumptions">
+        <h2 style="margin: 0 0 8px 0;">가정</h2>
+        <div class="chips">
+          <span class="chip">공정 추첨</span>
+          <span class="chip">각 구매는 독립</span>
+          <span class="chip">1~45 중 6개 선택</span>
+          <span class="chip">2등은 보너스 포함(5+보너스)</span>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const byId = (id) => document.getElementById(id);
+      const nEl = byId('n');
+      const headlineEl = byId('headline');
+      const p1El = byId('p1');
+      const p2El = byId('p2');
+      const p3El = byId('p3');
+      const p4El = byId('p4');
+      const p5El = byId('p5');
+      const expectationsEl = byId('expectations');
+
+      document.getElementById('goHome')?.addEventListener('click', () => {
+        window.location.href = '/';
+      });
+
+      function comb(n, k) {
+        // Small integers here; safe in Number.
+        if (k < 0 || k > n) return 0;
+        k = Math.min(k, n - k);
+        let res = 1;
+        for (let i = 1; i <= k; i += 1) {
+          res = (res * (n - k + i)) / i;
+        }
+        return res;
+      }
+
+      function pct(x) {
+        const v = Number(x);
+        if (!Number.isFinite(v)) return '-';
+        return `${(v * 100).toFixed(6)}%`;
+      }
+
+      function fmt(x) {
+        const v = Number(x);
+        if (!Number.isFinite(v)) return '-';
+        if (v >= 1000) return v.toFixed(0);
+        if (v >= 10) return v.toFixed(2);
+        return v.toFixed(4);
+      }
+
+      function atLeastOne(p, n) {
+        // 1 - (1-p)^n, stable for small p.
+        const lp = Math.log1p(-p);
+        return -Math.expm1(n * lp);
+      }
+
+      function singleGameProbs() {
+        const total = comb(45, 6);
+
+        // 1st: 6 match
+        const p1 = 1 / total;
+
+        // 2nd: 5 match + bonus => 6 / total
+        const p2 = 6 / total;
+
+        // 3rd: 5 match without bonus => (6*39 - 6)/total = 228/total
+        const p3 = 228 / total;
+
+        // 4th: 4 match
+        const p4 = (comb(6, 4) * comb(39, 2)) / total;
+
+        // 5th: 3 match
+        const p5 = (comb(6, 3) * comb(39, 3)) / total;
+
+        return { total, p1, p2, p3, p4, p5 };
+      }
+
+      function renderExpectations(N, probs) {
+        if (!expectationsEl) return;
+        expectationsEl.innerHTML = '';
+
+        const rows = [
+          { label: '1등 (6개 일치)', p: probs.p1 },
+          { label: '2등 (5+보너스)', p: probs.p2 },
+          { label: '3등 (5개 일치)', p: probs.p3 },
+          { label: '4등 (4개 일치)', p: probs.p4 },
+          { label: '5등 (3개 일치)', p: probs.p5 },
+        ];
+
+        rows.forEach((r) => {
+          const item = document.createElement('div');
+          item.className = 'list-item';
+
+          const title = document.createElement('div');
+          title.className = 'list-title';
+          title.textContent = r.label;
+
+          const meta = document.createElement('div');
+          meta.className = 'muted';
+          meta.style.marginTop = '6px';
+          meta.textContent = `단일 확률 p=${pct(r.p)} · 기대 당첨 횟수=${fmt(N * r.p)}회`;
+
+          item.appendChild(title);
+          item.appendChild(meta);
+          expectationsEl.appendChild(item);
+        });
+      }
+
+      function calculate() {
+        const raw = String(nEl?.value ?? '').trim();
+        const N = Number.parseInt(raw || '0', 10);
+        if (!Number.isInteger(N) || N <= 0) {
+          if (headlineEl) headlineEl.textContent = '구매 횟수(N)는 1 이상의 정수여야 합니다.';
+          return;
+        }
+
+        const probs = singleGameProbs();
+        const p1n = atLeastOne(probs.p1, N);
+        const p2n = atLeastOne(probs.p2, N);
+        const p3n = atLeastOne(probs.p3, N);
+        const p4n = atLeastOne(probs.p4, N);
+        const p5n = atLeastOne(probs.p5, N);
+
+        if (headlineEl) {
+          headlineEl.textContent = `${N.toLocaleString()}회 구매해도 1등 확률(최소 1회 이상)은 ${pct(p1n)} 입니다.`;
+        }
+        if (p1El) p1El.textContent = pct(p1n);
+        if (p2El) p2El.textContent = pct(p2n);
+        if (p3El) p3El.textContent = pct(p3n);
+        if (p4El) p4El.textContent = pct(p4n);
+        if (p5El) p5El.textContent = pct(p5n);
+
+        renderExpectations(N, probs);
+      }
+
+      byId('calc')?.addEventListener('click', calculate);
+      nEl?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') calculate();
+      });
+
+      // Initial calculation
+      calculate();
+    </script>
+  </body>
+</html>

@@ -125,6 +125,61 @@ class DrawService:
         self._max_retries = max_retries
 
     @staticmethod
+    def _has_consecutive_pair(numbers6: NumberTuple6) -> bool:
+        for i in range(5):
+            if int(numbers6[i + 1]) - int(numbers6[i]) == 1:
+                return True
+        return False
+
+    @staticmethod
+    def _last_digits_unique(numbers6: NumberTuple6) -> bool:
+        ds = [int(n) % 10 for n in numbers6]
+        return len(set(ds)) == len(ds)
+
+    @staticmethod
+    def _bucket_count(numbers6: NumberTuple6, bucket: str) -> int:
+        ranges = {
+            "1-10": (1, 10),
+            "11-20": (11, 20),
+            "21-30": (21, 30),
+            "31-40": (31, 40),
+            "41-45": (41, 45),
+        }
+        lo, hi = ranges.get(bucket, (1, 10))
+        return sum(1 for n in numbers6 if int(n) >= lo and int(n) <= hi)
+
+    def _passes_advanced_options(self, numbers6: NumberTuple6, advanced_options: dict | None) -> bool:
+        opts = advanced_options or {}
+
+        consecutive_mode = str(opts.get("consecutive_mode") or "ALLOW").upper()
+        has_consecutive = self._has_consecutive_pair(numbers6)
+        if consecutive_mode == "REQUIRE" and not has_consecutive:
+            return False
+        if consecutive_mode == "FORBID" and has_consecutive:
+            return False
+
+        last_digit_mode = str(opts.get("last_digit_mode") or "ALLOW").upper()
+        if last_digit_mode == "FORBID" and not self._last_digits_unique(numbers6):
+            return False
+
+        rf = opts.get("range_filter") if isinstance(opts.get("range_filter"), dict) else {}
+        enabled = bool(rf.get("enabled")) if isinstance(rf, dict) else False
+        if enabled:
+            bucket = str(rf.get("bucket") or "1-10")
+            try:
+                mn = int(rf.get("min_count") if rf.get("min_count") is not None else 0)
+                mx = int(rf.get("max_count") if rf.get("max_count") is not None else 6)
+            except (TypeError, ValueError):
+                return False
+            if mn > mx:
+                return False
+            c = self._bucket_count(numbers6, bucket)
+            if c < mn or c > mx:
+                return False
+
+        return True
+
+    @staticmethod
     def _normalize6(numbers: Iterable[int]) -> NumberTuple6:
         t = tuple(sorted(int(n) for n in numbers))
         return (int(t[0]), int(t[1]), int(t[2]), int(t[3]), int(t[4]), int(t[5]))
@@ -140,7 +195,15 @@ class DrawService:
                 int(comb5[4]),
             )
 
-    def draw(self, session: Session, exclude_mode: str, exclude_numbers: Iterable[int] | None = None) -> list[int]:
+    def draw(
+        self,
+        session: Session,
+        exclude_mode: str,
+        exclude_numbers: Iterable[int] | None = None,
+        exclude_draws: Iterable[Iterable[int]] | None = None,
+        fixed_numbers: Iterable[int] | None = None,
+        advanced_options: dict | None = None,
+    ) -> list[int]:
         """Draw numbers according to the exclude mode.
 
         Returns a sorted list of 6 unique integers in [1, 45].
@@ -169,15 +232,54 @@ class DrawService:
                     details={"exclude_numbers": ["Too many excluded numbers (must be <= 39)"]},
                 )
 
-        population = [n for n in range(1, 46) if n not in exclude_set]
-        if len(population) < 6:
+        fixed_set = {int(n) for n in fixed_numbers} if fixed_numbers else set()
+        if fixed_set:
+            if any(n < 1 or n > 45 for n in fixed_set):
+                raise ValidationError(
+                    message="Invalid fixed_numbers",
+                    details={"fixed_numbers": ["All numbers must be within 1..45"]},
+                )
+            if len(fixed_set) > 2:
+                raise ValidationError(
+                    message="Invalid fixed_numbers",
+                    details={"fixed_numbers": ["Too many fixed numbers (must be <= 2)"]},
+                )
+            if exclude_set.intersection(fixed_set):
+                raise ValidationError(
+                    message="Invalid fixed_numbers",
+                    details={"fixed_numbers": ["Fixed numbers cannot overlap excluded numbers"]},
+                )
+
+        remaining_needed = 6 - len(fixed_set)
+        population = [n for n in range(1, 46) if n not in exclude_set and n not in fixed_set]
+        if remaining_needed < 0:
+            raise ValidationError(
+                message="Invalid fixed_numbers",
+                details={"fixed_numbers": ["Too many fixed numbers"]},
+            )
+        if len(population) < remaining_needed:
             raise ValidationError(
                 message="Invalid exclude_numbers",
-                details={"exclude_numbers": ["Not enough numbers left to draw 6"]},
+                details={"exclude_numbers": ["Not enough numbers left to draw 6 with fixed numbers"]},
             )
 
+        exclude_draws_set: set[NumberTuple6] = set()
+        if exclude_draws:
+            for d in exclude_draws:
+                dd = [int(x) for x in (d or [])]
+                if len(dd) != 6 or len(set(dd)) != 6:
+                    raise ValidationError(
+                        message="Invalid exclude_draws",
+                        details={"exclude_draws": ["Each draw must be 6 unique numbers"]},
+                    )
+                exclude_draws_set.add(self._normalize6(dd))
+
         for _ in range(self._max_retries):
-            candidate = self._normalize6(random.sample(population, 6))
+            picked = random.sample(population, remaining_needed) if remaining_needed else []
+            candidate = self._normalize6([*fixed_set, *picked])
+
+            if exclude_draws_set and candidate in exclude_draws_set:
+                continue
 
             if mode in (ExcludeMode.FIRST, ExcludeMode.ALL) and candidate in sets.first_place:
                 continue
@@ -188,6 +290,9 @@ class DrawService:
             if mode in (ExcludeMode.THIRD, ExcludeMode.ALL):
                 if any(sub5 in sets.third_place for sub5 in self._sub5(candidate)):
                     continue
+
+            if not self._passes_advanced_options(candidate, advanced_options):
+                continue
 
             return list(candidate)
 
@@ -203,6 +308,9 @@ class DrawService:
         session: Session,
         exclude_mode: str,
         exclude_numbers: Iterable[int] | None = None,
+        exclude_draws: Iterable[Iterable[int]] | None = None,
+        fixed_numbers: Iterable[int] | None = None,
+        advanced_options: dict | None = None,
         count: int = 1,
     ) -> list[list[int]]:
         if count < 1:
@@ -217,6 +325,13 @@ class DrawService:
             )
 
         return [
-            self.draw(session, exclude_mode=exclude_mode, exclude_numbers=exclude_numbers)
+            self.draw(
+                session,
+                exclude_mode=exclude_mode,
+                exclude_numbers=exclude_numbers,
+                exclude_draws=exclude_draws,
+                fixed_numbers=fixed_numbers,
+                advanced_options=advanced_options,
+            )
             for _ in range(int(count))
         ]

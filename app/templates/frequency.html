@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>번호 출현 빈도 히트맵</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Cdefs%3E%3CradialGradient%20id='g'%20cx='35%25'%20cy='30%25'%20r='80%25'%3E%3Cstop%20offset='0%25'%20stop-color='%232dd4bf'/%3E%3Cstop%20offset='55%25'%20stop-color='%237c5cff'/%3E%3Cstop%20offset='100%25'%20stop-color='%230b1220'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle%20cx='32'%20cy='32'%20r='28'%20fill='url(%23g)'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='28'%20fill='none'%20stroke='rgba(234,240,255,0.25)'%20stroke-width='2'/%3E%3Ctext%20x='32'%20y='38'%20text-anchor='middle'%20font-family='system-ui,Segoe%20UI,Arial'%20font-size='18'%20font-weight='800'%20fill='%23eaf0ff'%3E6%2F45%3C/text%3E%3C/svg%3E"
+    />
+    <style>
+      :root {
+        --bg: #0b1220;
+        --card: #0f1a2e;
+        --text: #eaf0ff;
+        --muted: #b8c3e6;
+        --border: rgba(234, 240, 255, 0.16);
+        --accent: #7c5cff;
+        --accent-2: #2dd4bf;
+      }
+
+      :root { color-scheme: dark; }
+      body { margin: 0; padding: 24px; line-height: 1.6; background: var(--bg); color: var(--text); }
+      main { max-width: 860px; margin: 0 auto; }
+      h1 { margin: 0 0 8px 0; letter-spacing: -0.02em; }
+      h2 { letter-spacing: -0.01em; }
+      .muted { color: var(--muted); }
+      .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin: 16px 0; }
+      .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+      .stack { display: flex; flex-direction: column; gap: 6px; }
+      label { font-weight: 700; }
+      select, button, input { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,0.03); color: var(--text); }
+      select { background: var(--card); }
+      option { background: var(--card); color: var(--text); }
+      select:focus, button:focus { outline: 2px solid rgba(124, 92, 255, 0.45); outline-offset: 2px; }
+      button { cursor: pointer; background: linear-gradient(135deg, rgba(124, 92, 255, 0.95), rgba(45, 212, 191, 0.9)); border: 0; font-weight: 800; }
+      button:active { transform: translateY(1px); }
+      .btn-secondary { background: rgba(255,255,255,0.06); border: 1px solid var(--border); font-weight: 800; }
+
+      .heatmap { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 10px; }
+      .cell {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px;
+        background: rgba(255,255,255,0.02);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        align-items: center;
+        justify-content: center;
+        min-height: 58px;
+        text-align: center;
+      }
+      .cell-num { font-weight: 900; font-size: 16px; letter-spacing: 0.01em; }
+      .cell-count { color: var(--muted); font-weight: 800; font-size: 12px; }
+      .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border); background: rgba(255,255,255,0.03); font-weight: 800; }
+      .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+      .divider { height: 1px; background: var(--border); margin: 14px 0; }
+      pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+      @media (max-width: 720px) { .heatmap { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="row" style="justify-content: space-between; align-items: flex-start;">
+          <div>
+            <h1>번호 출현 빈도 히트맵</h1>
+            <div class="muted">1~45 각 번호의 과거 출현 빈도를 시각화합니다.</div>
+          </div>
+          <div class="row" style="justify-content: flex-end;">
+            <button id="goHome" type="button" class="btn-secondary">홈으로</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="card" aria-label="Heatmap controls">
+        <div class="row" style="justify-content: space-between; align-items: flex-start;">
+          <div>
+            <div class="muted">색상 강도는 빈도(최소~최대)에 비례합니다. 핫/콜드 넘버를 직관적으로 볼 수 있어요.</div>
+          </div>
+          <div class="row" style="justify-content: flex-end;">
+            <div class="stack" style="align-items: flex-end; text-align: right;">
+              <label for="recentN" class="muted">최근 N회 기준</label>
+              <select id="recentN" aria-label="최근 N회 기준">
+                <option value="">전체</option>
+                <option value="10">최근 10회</option>
+                <option value="30">최근 30회</option>
+                <option value="50" selected>최근 50회</option>
+                <option value="100">최근 100회</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Heatmap">
+        <h2 style="margin: 0 0 8px 0;">히트맵</h2>
+        <div class="muted" id="meta" style="margin-bottom: 12px;">Loading…</div>
+        <div id="heatmap" class="heatmap" aria-live="polite"></div>
+        <div class="divider"></div>
+        <div class="row" style="justify-content: space-between; align-items: flex-start; gap: 12px;">
+          <div class="stack" style="gap: 10px;">
+            <div class="muted" style="font-weight: 800;">핫 넘버(상위 20%)</div>
+            <div id="hot" class="chips"></div>
+          </div>
+          <div class="stack" style="gap: 10px; align-items: flex-end; text-align: right;">
+            <div class="muted" style="font-weight: 800;">콜드 넘버(하위 20%)</div>
+            <div id="cold" class="chips" style="justify-content: flex-end;"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Exclude combination">
+        <h2 style="margin: 0 0 8px 0;">제외 조건과 결합</h2>
+        <div class="muted" style="margin-bottom: 12px;">아래 프리셋을 누르면 “제외할 번호”가 자동으로 만들어집니다. 만든 리스트를 홈 화면의 “제외할 번호”에 넣어서 조합 조건과 결합할 수 있어요.</div>
+
+        <div class="row" style="justify-content: space-between; align-items: flex-start;">
+          <div class="stack" style="gap: 8px;">
+            <div class="muted" style="font-weight: 800;">추천 프리셋 3개</div>
+            <div class="muted" style="font-size: 13px;">완전 배제 대신, “너무 많이/너무 적게 나온 번호”만 적당히 조절하는 방식입니다.</div>
+          </div>
+          <div class="row" style="justify-content: flex-end;">
+            <button id="presetHot10" type="button" class="btn-secondary">핫 상위 10개 제외</button>
+            <button id="presetHot5" type="button" class="btn-secondary">핫 상위 5개 제외</button>
+            <button id="presetMiddle60" type="button" class="btn-secondary">중간 60%만 사용</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div id="presetMeta" class="muted" style="margin-bottom: 12px;">기본: 콜드 넘버만 남기기(하위 20%) 기준 리스트가 표시됩니다.</div>
+        <div class="row" style="justify-content: space-between; align-items: flex-start;">
+          <div class="stack" style="flex: 1; min-width: 240px;">
+            <label class="muted" style="font-weight: 800;">제외할 번호 (콜드 넘버만 남기기) <span id="excludeCount" class="muted" style="font-weight: 800;">(제외 0개)</span></label>
+            <pre id="excludeList" style="padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: rgba(255,255,255,0.02);"></pre>
+          </div>
+          <div class="row" style="justify-content: flex-end;">
+            <button id="copyExclude" type="button" class="btn-secondary">Copy</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const heatmapEl = document.getElementById('heatmap');
+      const metaEl = document.getElementById('meta');
+      const recentEl = document.getElementById('recentN');
+      const hotEl = document.getElementById('hot');
+      const coldEl = document.getElementById('cold');
+      const excludeListEl = document.getElementById('excludeList');
+      const excludeCountEl = document.getElementById('excludeCount');
+      const copyExcludeBtn = document.getElementById('copyExclude');
+      const presetMetaEl = document.getElementById('presetMeta');
+      const presetHot10Btn = document.getElementById('presetHot10');
+      const presetHot5Btn = document.getElementById('presetHot5');
+      const presetMiddle60Btn = document.getElementById('presetMiddle60');
+
+      let lastFrequencyData = null;
+      let currentExcludeText = '';
+
+      document.getElementById('goHome')?.addEventListener('click', () => {
+        window.location.href = '/';
+      });
+
+      function clearEl(el) {
+        if (!el) return;
+        while (el.firstChild) el.removeChild(el.firstChild);
+      }
+
+      function clamp01(x) {
+        return Math.max(0, Math.min(1, x));
+      }
+
+      function intensityToBg(t) {
+        // Use theme accent colors only; vary alpha based on intensity.
+        const a1 = 0.06 + 0.44 * t;
+        const a2 = 0.04 + 0.36 * t;
+        return `linear-gradient(135deg, rgba(124, 92, 255, ${a1}), rgba(45, 212, 191, ${a2}))`;
+      }
+
+      function renderChips(container, nums) {
+        clearEl(container);
+        (Array.isArray(nums) ? nums : []).forEach((n) => {
+          const chip = document.createElement('span');
+          chip.className = 'chip';
+          chip.textContent = String(n);
+          container.appendChild(chip);
+        });
+      }
+
+      function setExcludeList(nums, metaText) {
+        const list = Array.isArray(nums) ? nums.slice() : [];
+        list.sort((a, b) => a - b);
+        const text = list.join(', ');
+        currentExcludeText = text;
+        if (excludeListEl) excludeListEl.textContent = text || '—';
+        if (excludeCountEl) excludeCountEl.textContent = `(제외 ${list.length}개)`;
+        if (presetMetaEl) presetMetaEl.textContent = metaText || '';
+      }
+
+      function toSortedArray(counts) {
+        const arr = [];
+        for (let i = 1; i <= 45; i += 1) {
+          const c = Number(counts?.[String(i)] ?? counts?.[i] ?? 0);
+          arr.push({ n: i, c });
+        }
+        // asc by count, tie by number
+        arr.sort((a, b) => (a.c - b.c) || (a.n - b.n));
+        return arr;
+      }
+
+      function pickBottom(arr, k) {
+        return arr.slice(0, Math.max(0, k)).map(x => x.n);
+      }
+
+      function pickTop(arr, k) {
+        return arr.slice(Math.max(0, arr.length - Math.max(0, k))).map(x => x.n);
+      }
+
+      async function copyText(text) {
+        const value = String(text ?? '');
+        try {
+          await navigator.clipboard.writeText(value);
+          return true;
+        } catch {
+          const ta = document.createElement('textarea');
+          ta.value = value;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.left = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          const ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+          return ok;
+        }
+      }
+
+      async function load() {
+        const n = String(recentEl?.value ?? '').trim();
+        const params = new URLSearchParams();
+        if (n) params.set('n', n);
+        // percent fixed to 0.2 (20%) for now.
+        params.set('percent', '0.2');
+
+        const res = await fetch(`/analysis/frequency?${params.toString()}`);
+        const payload = await res.json();
+        if (!res.ok || !payload.success) throw new Error(payload?.error?.message ?? 'Failed to load frequency');
+
+        const data = payload.data;
+        lastFrequencyData = data;
+        const counts = data?.counts ?? {};
+        const minC = Number(data?.min_count ?? 0);
+        const maxC = Number(data?.max_count ?? 0);
+        const used = Number(data?.draws_used ?? 0);
+        const recent = data?.recent_n;
+
+        const denom = Math.max(1, maxC - minC);
+
+        if (metaEl) {
+          const basis = recent ? `최근 ${recent}회` : '전체';
+          metaEl.textContent = `${basis} 기준 (사용 회차=${used}) · min=${minC}, max=${maxC}`;
+        }
+
+        clearEl(heatmapEl);
+        for (let i = 1; i <= 45; i += 1) {
+          const c = Number(counts[String(i)] ?? counts[i] ?? 0);
+          const t = clamp01((c - minC) / denom);
+
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.style.background = intensityToBg(t);
+          cell.title = `${i}: ${c}`;
+
+          const num = document.createElement('div');
+          num.className = 'cell-num';
+          num.textContent = String(i);
+
+          const cnt = document.createElement('div');
+          cnt.className = 'cell-count';
+          cnt.textContent = `${c}회`;
+
+          cell.appendChild(num);
+          cell.appendChild(cnt);
+          heatmapEl.appendChild(cell);
+        }
+
+        renderChips(hotEl, data?.hot_numbers ?? []);
+        renderChips(coldEl, data?.cold_numbers ?? []);
+
+        // Default suggestion: exclude everything except cold numbers.
+        const exclude = Array.isArray(data?.exclude_numbers_for_only_cold)
+          ? data.exclude_numbers_for_only_cold
+          : [];
+        const basis = recent ? `최근 ${recent}회` : '전체';
+        setExcludeList(exclude, `기본(콜드만 남기기): ${basis} 기준 하위 20%만 포함하도록 나머지를 제외합니다.`);
+      }
+
+      function applyPreset(presetName) {
+        if (!lastFrequencyData) return;
+        const counts = lastFrequencyData?.counts ?? {};
+        const arr = toSortedArray(counts);
+
+        const recent = lastFrequencyData?.recent_n;
+        const basis = recent ? `최근 ${recent}회` : '전체';
+
+        if (presetName === 'hot10') {
+          const exclude = pickTop(arr, 10);
+          setExcludeList(exclude, `프리셋: 핫 상위 10개 제외 (${basis} 기준)`);
+          return;
+        }
+
+        if (presetName === 'hot5') {
+          const exclude = pickTop(arr, 5);
+          setExcludeList(exclude, `프리셋: 핫 상위 5개 제외 (${basis} 기준)`);
+          return;
+        }
+
+        if (presetName === 'middle60') {
+          // Exclude both extremes (bottom 20% + top 20%) => keep middle 60%.
+          const k = 9; // 20% of 45 => 9
+          const exclude = [...pickBottom(arr, k), ...pickTop(arr, k)];
+          const uniq = Array.from(new Set(exclude));
+          setExcludeList(uniq, `프리셋: 중간 60%만 사용 (상·하위 20% 제외, ${basis} 기준)`);
+          return;
+        }
+      }
+
+      recentEl?.addEventListener('change', () => {
+        load().catch((e) => {
+          if (metaEl) metaEl.textContent = String(e);
+        });
+      });
+
+      presetHot10Btn?.addEventListener('click', () => applyPreset('hot10'));
+      presetHot5Btn?.addEventListener('click', () => applyPreset('hot5'));
+      presetMiddle60Btn?.addEventListener('click', () => applyPreset('middle60'));
+
+      copyExcludeBtn?.addEventListener('click', async () => {
+        const text = String(currentExcludeText || '').trim();
+        if (!text) return;
+        copyExcludeBtn.disabled = true;
+        copyExcludeBtn.style.opacity = '0.7';
+        try {
+          await copyText(text);
+        } finally {
+          copyExcludeBtn.disabled = false;
+          copyExcludeBtn.style.opacity = '1';
+        }
+      });
+
+      load().catch((e) => {
+        if (metaEl) metaEl.textContent = String(e);
+      });
+    </script>
+  </body>
+</html>

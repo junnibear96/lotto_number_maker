@@ -18,6 +18,16 @@ def overlaps():
     return render_template("overlaps.html")
 
 
+@web_bp.get("/frequency")
+def frequency():
+    return render_template("frequency.html")
+
+
+@web_bp.get("/simulator")
+def simulator():
+    return render_template("simulator.html")
+
+
 @web_bp.get("/favicon.ico")
 def favicon() -> Response:
         svg = """<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>

@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@aws-sdk/rds-signer": "^3.962.0",
+    "@vercel/analytics": "^1.6.1",
     "@vercel/functions": "^3.3.5",
     "pg": "^8.16.3",
     "vercel": "^50.1.4"

@@ -47,6 +47,11 @@ def resolve_database_url() -> str:
         )
         return str(url)
 
+    # Vercel serverless functions typically have a read-only filesystem except
+    # for /tmp. If we fall back to sqlite there, keep it writable.
+    if os.getenv("VERCEL"):
+        return "sqlite:////tmp/app.db"
+
     return "sqlite:///./app.db"
 
 

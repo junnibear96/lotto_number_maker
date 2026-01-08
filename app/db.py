@@ -142,11 +142,17 @@ def init_db(app: Flask) -> None:
         init_mongo(app)
         return
 
-    engine = create_app_engine(str(app.config["DATABASE_URL"]))
+    database_url = str(app.config["DATABASE_URL"])
+    engine = create_app_engine(database_url)
     session_factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
-    # Create tables for the example (production would use migrations).
-    Base.metadata.create_all(bind=engine)
+    # Create tables only when explicitly enabled, or when using sqlite.
+    # On serverless (including Vercel), sqlite is typically ephemeral (/tmp) but
+    # still useful for demo routes; Postgres/Mongo should be managed via migrations.
+    auto_create = str(os.getenv("AUTO_CREATE_TABLES", "")).lower().strip() in {"1", "true", "yes", "on"}
+    url = make_url(database_url)
+    if url.get_backend_name() == "sqlite" or auto_create:
+        Base.metadata.create_all(bind=engine)
 
     app.extensions["engine"] = engine
     app.extensions["session_factory"] = session_factory

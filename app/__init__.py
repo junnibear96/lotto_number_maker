@@ -31,6 +31,7 @@ def create_app() -> Flask:
     from app.routes.draw import draw_bp
     from app.routes.health import health_bp
     from app.routes.items import items_bp
+    from app.routes.lotto_results import lotto_results_bp
     from app.routes.web import web_bp
 
     app = Flask(__name__)
@@ -44,6 +45,7 @@ def create_app() -> Flask:
     app.register_blueprint(web_bp)
     app.register_blueprint(analysis_bp)
     app.register_blueprint(items_bp, url_prefix="/api")
+    app.register_blueprint(lotto_results_bp, url_prefix="/api")
     app.register_blueprint(draw_bp)
 
     return app

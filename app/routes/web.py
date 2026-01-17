@@ -13,6 +13,11 @@ def index():
     return render_template("index.html")
 
 
+@web_bp.get("/compare")
+def compare():
+    return render_template("compare.html")
+
+
 @web_bp.get("/overlaps")
 def overlaps():
     return render_template("overlaps.html")

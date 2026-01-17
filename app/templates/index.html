@@ -402,6 +402,7 @@
           <button id="goOverlaps" type="button" class="btn-secondary">겹치는 조합 보기</button>
           <button id="goFrequency" type="button" class="btn-secondary">번호 빈도 히트맵</button>
           <button id="goSimulator" type="button" class="btn-secondary">당첨 확률 시뮬레이터</button>
+          <button id="goCompare" type="button" class="btn-secondary">추첨 번호 확인하기</button>
         </div>
       </div>
     </header>
@@ -601,6 +602,7 @@
         <h2 style="margin: 0;">히스토리</h2>
         <div class="row" style="justify-content: flex-end;">
           <button id="copyHistoryBtn" type="button" class="btn-secondary">Copy</button>
+          <button id="copylocalStorageBtn" type="button" class="btn-secondary">저장하기</button>
           <button id="downloadHistoryBtn" type="button" class="btn-secondary">Excel 다운로드</button>
         </div>
       </div>
@@ -642,6 +644,7 @@
     const historyEl = document.getElementById('history');
     const historyEmptyEl = document.getElementById('historyEmpty');
     const copyHistoryBtn = document.getElementById('copyHistoryBtn');
+    const copyLocalStorageBtn = document.getElementById('copylocalStorageBtn');
     const downloadHistoryBtn = document.getElementById('downloadHistoryBtn');
     const appAlertEl = document.getElementById('appAlert');
     const appAlertTitleEl = document.getElementById('appAlertTitle');
@@ -682,10 +685,47 @@
       window.location.href = '/simulator';
     });
 
+    document.getElementById('goCompare')?.addEventListener('click', () => {
+      window.location.href = '/compare';
+    });
+
     const history = [];
+    const STORAGE_KEY = 'lotto_history_v1';
 
     let historyIdSeq = 1;
     const excludedHistoryIds = new Set();
+
+    function saveHistory() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+      } catch (e) {
+        console.error('saveHistory failed', e);
+      }
+    }
+
+    function loadHistory() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            history.length = 0;
+            let maxId = 0;
+            parsed.forEach((item) => {
+              history.push(item);
+              if (item.id && typeof item.id === 'string' && item.id.startsWith('h')) {
+                const n = parseInt(item.id.substring(1), 10);
+                if (!Number.isNaN(n) && n > maxId) maxId = n;
+              }
+            });
+            historyIdSeq = maxId + 1;
+          }
+        }
+      } catch (e) {
+        console.error('loadHistory failed', e);
+      }
+      renderHistory();
+    }
 
     function ensureHistoryItemIds() {
       history.forEach((item) => {
@@ -1049,6 +1089,15 @@
         downloadHistoryBtn.disabled = false;
         downloadHistoryBtn.style.opacity = '1';
       }
+    });
+
+    copyLocalStorageBtn?.addEventListener('click', () => {
+      if (history.length === 0) {
+        showAlert('기록이 없습니다');
+        return;
+      }
+      saveHistory();
+      showToast('모든 결과가 로컬 스토리지에 저장되었습니다.');
     });
 
     function fmtPct(p) {
@@ -1662,6 +1711,7 @@
         setDrawingState(false);
       }
     });
+    loadHistory();
   </script>
 </body>
 

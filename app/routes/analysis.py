@@ -29,6 +29,7 @@ def get_overlap_analysis():
             "overlapping_2nd_prize_combinations": result.second_prize_overlaps,
             "overlapping_3rd_prize_combinations": result.third_prize_overlaps,
             "cross_overlaps_2nd_vs_3rd": result.cross_overlaps,
+            "consecutive_overlaps": result.consecutive_overlaps,
             "overlap_percentages": result.overlap_percentages,
         }
     )

@@ -32,6 +32,7 @@ class HistoricalExclusionSets:
     first_place: set[NumberTuple6]
     second_place: set[NumberTuple6]
     third_place: set[NumberTuple5]
+    latest_draw_numbers: NumberTuple6 | None = None
 
 
 class _HistoricalCache:
@@ -106,10 +107,25 @@ class _HistoricalCache:
                         )
                     )
 
+            latest_draw_numbers: NumberTuple6 | None = None
+            if draws:
+                last_draw = draws[-1]
+                latest_draw_numbers = self._normalize(
+                    (
+                        int(last_draw.number1),
+                        int(last_draw.number2),
+                        int(last_draw.number3),
+                        int(last_draw.number4),
+                        int(last_draw.number5),
+                        int(last_draw.number6),
+                    )
+                )
+
             self._sets = HistoricalExclusionSets(
                 first_place=first_place,
                 second_place=second_place,
                 third_place=third_place,
+                latest_draw_numbers=latest_draw_numbers,
             )
             self._loaded = True
             return self._sets
@@ -148,7 +164,12 @@ class DrawService:
         lo, hi = ranges.get(bucket, (1, 10))
         return sum(1 for n in numbers6 if int(n) >= lo and int(n) <= hi)
 
-    def _passes_advanced_options(self, numbers6: NumberTuple6, advanced_options: dict | None) -> bool:
+    def _passes_advanced_options(
+        self,
+        numbers6: NumberTuple6,
+        advanced_options: dict | None,
+        latest_draw: NumberTuple6 | None = None,
+    ) -> bool:
         opts = advanced_options or {}
 
         consecutive_mode = str(opts.get("consecutive_mode") or "ALLOW").upper()
@@ -176,6 +197,17 @@ class DrawService:
             c = self._bucket_count(numbers6, bucket)
             if c < mn or c > mx:
                 return False
+
+        max_prev_overlap = opts.get("max_previous_draw_overlap")
+        if max_prev_overlap is not None and latest_draw is not None:
+            try:
+                limit = int(max_prev_overlap)
+                # Calculate overlap between candidate (numbers6) and latest_draw
+                overlap_count = len(set(numbers6).intersection(set(latest_draw)))
+                if overlap_count > limit:
+                    return False
+            except (ValueError, TypeError):
+                pass  # Ignore invalid option
 
         return True
 
@@ -291,7 +323,7 @@ class DrawService:
                 if any(sub5 in sets.third_place for sub5 in self._sub5(candidate)):
                     continue
 
-            if not self._passes_advanced_options(candidate, advanced_options):
+            if not self._passes_advanced_options(candidate, advanced_options, latest_draw=sets.latest_draw_numbers):
                 continue
 
             return list(candidate)

@@ -42,6 +42,12 @@ class AdvancedOptionsSchema(Schema):
 
     range_filter = fields.Nested(RangeFilterSchema, required=False, load_default=lambda: {})
 
+    max_previous_draw_overlap = fields.Integer(
+        required=False,
+        load_default=6,
+        validate=validate.Range(min=0, max=6),
+    )
+
 
 class DrawRequestSchema(Schema):
     exclude_mode = fields.String(

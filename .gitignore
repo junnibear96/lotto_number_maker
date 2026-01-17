@@ -12,6 +12,7 @@ __pycache__/
 dist/
 build/
 *.egg
+*.pyc
 
 # --- Virtual environments ---
 .venv/
@@ -61,3 +62,10 @@ Desktop.ini
 node_modules/
 .vercel
 .env*.local
+
+# Ignore Python bytecode files
+*.pyc
+*.pyo
+*.pyd
+# Ignore __pycache__ directories
+__pycache__/

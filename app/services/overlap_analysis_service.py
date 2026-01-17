@@ -23,6 +23,7 @@ class OverlapAnalysisResult:
     second_prize_overlaps: list[dict[str, object]]
     third_prize_overlaps: list[dict[str, object]]
     cross_overlaps: list[dict[str, object]]
+    consecutive_overlaps: dict[int, list[dict[str, object]]]
     overlap_percentages: dict[str, object]
 
 
@@ -240,11 +241,45 @@ class OverlapAnalysisService:
             },
         }
 
+        # --- Consecutive Overlaps (Draw N vs Draw N-1) ---
+        draws_sorted = sorted(draws, key=lambda x: x.draw_no)
+        consecutive_overlaps: dict[int, list[dict[str, object]]] = {
+            k: [] for k in range(1, 7)
+        }
+
+        for i in range(1, len(draws_sorted)):
+            curr_draw = draws_sorted[i]
+            prev_draw = draws_sorted[i - 1]
+
+            # Ensure they are truly consecutive in numbers (optional, but requested: "previous week")
+            # If there's a gap in draw numbers, we should probably skip or handle it.
+            # Assuming standard "previous record" logic for now regardless of draw_no gap,
+            # but strictly speaking "consecutive week" usually implies consecutive draw_no.
+            if curr_draw.draw_no != prev_draw.draw_no + 1:
+                # Decide policy: skip if not strictly consecutive draw numbers?
+                # For safety and correctness of "week to week", we check consecutive draw_no.
+                continue
+
+            curr_main = set(self._main_numbers(curr_draw))
+            prev_main = set(self._main_numbers(prev_draw))
+
+            intersection = curr_main & prev_main
+            count = len(intersection)
+
+            if 1 <= count <= 6:
+                consecutive_overlaps[count].append({
+                    "draw_no": curr_draw.draw_no,
+                    "prev_draw_no": prev_draw.draw_no,
+                    "overlap_count": count,
+                    "overlapping_numbers": sorted(list(intersection)),
+                })
+
         return OverlapAnalysisResult(
             total_draws=len(draws),
             first_prize_overlaps=first_overlaps,
             second_prize_overlaps=second_overlaps,
             third_prize_overlaps=third_overlaps,
             cross_overlaps=cross_overlaps,
+            consecutive_overlaps=consecutive_overlaps,
             overlap_percentages=overlap_percentages,
         )
